@@ -1,0 +1,93 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "swedencentral"
+    },
+    "namePrefix": {
+      "value": "ai"
+    },
+    "deployTestVm": {
+      "value": false
+    },
+    "deployPrivateEndpoints": {
+      "value": true
+    },
+    "networkAccessMode": {
+      "value": "hybridPePlusIp"
+    },
+    "allowedClientIp": {
+      "value": "167.220.196.0/23"
+    },
+    "existingApimResourceId": {
+      "value": ""
+    },
+    "apimSkuName": {
+      "value": "StandardV2"
+    },
+    "enableAgentNetworkInjection": {
+      "value": true
+    },
+    "deployAgentCapabilityHost": {
+      "value": true
+    },
+    "centralModelDeploymentName": {
+      "value": "enterprise-gpt5-mini"
+    },
+    "centralModelName": {
+      "value": "gpt-5-mini"
+    },
+    "centralModelVersion": {
+      "value": "2025-08-07"
+    },
+    "centralModelSkuName": {
+      "value": "GlobalStandard"
+    },
+    "centralModelCapacity": {
+      "value": 1
+    },
+    "teamNames": {
+      "value": [
+        "team-a",
+        "team-b"
+      ]
+    },
+    "hubVnetAddressPrefix": {
+      "value": "10.10.0.0/16"
+    },
+    "teamAVnetAddressPrefix": {
+      "value": "10.20.0.0/16"
+    },
+    "teamBVnetAddressPrefix": {
+      "value": "10.30.0.0/16"
+    },
+    "enableContentSafetyPolicy": {
+      "value": false
+    },
+    "enablePromptBodyLogging": {
+      "value": false
+    },
+    "teamTokenLimitsPerMinute": {
+      "value": [
+        1000,
+        1000
+      ]
+    },
+    "enableTokenLimitPolicy": {
+      "value": true
+    },
+    "enableTokenMetricPolicy": {
+      "value": true
+    },
+    "inferenceApiVersion": {
+      "value": "2024-10-21"
+    },
+    "foundryToApimAuthType": {
+      "value": "ApiKey"
+    }
+  }
+}

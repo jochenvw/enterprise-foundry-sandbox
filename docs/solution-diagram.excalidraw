@@ -1,0 +1,1373 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "copilot",
+  "elements": [
+    {
+      "type": "text",
+      "x": 40,
+      "y": 20,
+      "width": 1600,
+      "height": 44,
+      "text": "Enterprise Microsoft Foundry \u2014 Component-Level Solution Diagram (Sweden Central)",
+      "fontSize": 26,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t1",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "text",
+      "x": 40,
+      "y": 62,
+      "width": 1600,
+      "height": 24,
+      "text": "Hub/spoke topology \u00b7 private networking \u00b7 central governed model via APIM AI Gateway",
+      "fontSize": 15,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t2",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "ellipse",
+      "x": 250,
+      "y": 110,
+      "width": 300,
+      "height": 70,
+      "strokeColor": "#107C10",
+      "backgroundColor": "#DFF6DD",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "e3"
+    },
+    {
+      "type": "text",
+      "x": 260,
+      "y": 128,
+      "width": 280,
+      "height": 50,
+      "text": "Team A users\n(build agents & apps)",
+      "fontSize": 13,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t4",
+      "textAlign": "center",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "ellipse",
+      "x": 1090,
+      "y": 110,
+      "width": 320,
+      "height": 70,
+      "strokeColor": "#0078D4",
+      "backgroundColor": "#CFE4FA",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "e5"
+    },
+    {
+      "type": "text",
+      "x": 1100,
+      "y": 128,
+      "width": 300,
+      "height": 46,
+      "text": "Central cloud / platform team\n(approve & host models, own gateway)",
+      "fontSize": 12,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t6",
+      "textAlign": "center",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "ellipse",
+      "x": 1950,
+      "y": 110,
+      "width": 300,
+      "height": 70,
+      "strokeColor": "#5C2D91",
+      "backgroundColor": "#E8DAEF",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "e7"
+    },
+    {
+      "type": "text",
+      "x": 1960,
+      "y": 128,
+      "width": 280,
+      "height": 50,
+      "text": "Team B users\n(build agents & apps)",
+      "fontSize": 13,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t8",
+      "textAlign": "center",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 40,
+      "y": 250,
+      "width": 740,
+      "height": 1180,
+      "strokeColor": "#107C10",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 3,
+      "id": "r9",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 56,
+      "y": 262,
+      "width": 710,
+      "height": 31,
+      "text": "RG  rg-ai-team-a-swc-dev   (spoke)",
+      "fontSize": 15,
+      "fontFamily": 3,
+      "strokeColor": "#000000",
+      "id": "t10",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 70,
+      "y": 308,
+      "width": 680,
+      "height": 300,
+      "strokeColor": "#495057",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r11",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 84,
+      "y": 318,
+      "width": 650,
+      "height": 28,
+      "text": "VNet  vnet-ai-team-a \u00b7 10.20.0.0/16",
+      "fontSize": 13,
+      "fontFamily": 3,
+      "strokeColor": "#000000",
+      "id": "t12",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 90,
+      "y": 352,
+      "width": 640,
+      "height": 66,
+      "strokeColor": "#495057",
+      "backgroundColor": "#FFFFFF",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r13",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 102,
+      "y": 360,
+      "width": 620,
+      "height": 43,
+      "text": "snet-foundry-agents \u00b7 10.20.1.0/24\ndelegated Microsoft.app/environments",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t14",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 90,
+      "y": 426,
+      "width": 640,
+      "height": 58,
+      "strokeColor": "#495057",
+      "backgroundColor": "#FFFFFF",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r15",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 102,
+      "y": 438,
+      "width": 620,
+      "height": 24,
+      "text": "snet-private-endpoints \u00b7 10.20.2.0/24",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t16",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 90,
+      "y": 492,
+      "width": 640,
+      "height": 58,
+      "strokeColor": "#495057",
+      "backgroundColor": "#FFFFFF",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r17",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 102,
+      "y": 504,
+      "width": 620,
+      "height": 24,
+      "text": "snet-team-apps \u00b7 10.20.3.0/24",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t18",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 70,
+      "y": 628,
+      "width": 680,
+      "height": 118,
+      "strokeColor": "#107C10",
+      "backgroundColor": "#DFF6DD",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r19",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 84,
+      "y": 640,
+      "width": 650,
+      "height": 67,
+      "text": "Foundry  fndry-team-a  (AIServices)\nProject: proj-team-a\nAgents injected \u2192 agents subnet \u00b7 PE \u2192 PE subnet",
+      "fontSize": 12,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t20",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "text",
+      "x": 70,
+      "y": 762,
+      "width": 680,
+      "height": 26,
+      "text": "BYO data (Team A) \u2014 each via Private Endpoint",
+      "fontSize": 12,
+      "fontFamily": 3,
+      "strokeColor": "#000000",
+      "id": "t21",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 70,
+      "y": 792,
+      "width": 335,
+      "height": 80,
+      "strokeColor": "#0c8599",
+      "backgroundColor": "#99e9f2",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r22",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 82,
+      "y": 804,
+      "width": 325,
+      "height": 43,
+      "text": "Storage (Blob)\nPE \u2192 PE subnet",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t23",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 415,
+      "y": 792,
+      "width": 335,
+      "height": 80,
+      "strokeColor": "#0c8599",
+      "backgroundColor": "#99e9f2",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r24",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 427,
+      "y": 804,
+      "width": 325,
+      "height": 43,
+      "text": "AI Search\nPE \u2192 PE subnet",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t25",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 70,
+      "y": 882,
+      "width": 335,
+      "height": 80,
+      "strokeColor": "#0c8599",
+      "backgroundColor": "#99e9f2",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r26",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 82,
+      "y": 894,
+      "width": 325,
+      "height": 43,
+      "text": "Cosmos DB (SQL)\nPE \u2192 PE subnet",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t27",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 415,
+      "y": 882,
+      "width": 335,
+      "height": 80,
+      "strokeColor": "#0c8599",
+      "backgroundColor": "#99e9f2",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r28",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 427,
+      "y": 894,
+      "width": 325,
+      "height": 43,
+      "text": "Key Vault\nPE \u2192 PE subnet",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t29",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 70,
+      "y": 990,
+      "width": 680,
+      "height": 150,
+      "strokeColor": "#D13438",
+      "backgroundColor": "#FDE7E9",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r30",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 84,
+      "y": 1002,
+      "width": 650,
+      "height": 80,
+      "text": "Team A access (where they work):\n\u2022 Work ONLY in proj-team-a within this spoke\n\u2022 Data-plane RBAC: fndry-team-a MSI \u2192 own Storage/Search/Cosmos/Key Vault\n\u2022 Consume the central model ONLY via APIM (no direct access)",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t31",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 820,
+      "y": 250,
+      "width": 860,
+      "height": 1180,
+      "strokeColor": "#0078D4",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 3,
+      "id": "r32",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 836,
+      "y": 262,
+      "width": 830,
+      "height": 31,
+      "text": "RG  rg-ai-hub-swc-dev   (hub)",
+      "fontSize": 15,
+      "fontFamily": 3,
+      "strokeColor": "#000000",
+      "id": "t33",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 850,
+      "y": 308,
+      "width": 800,
+      "height": 300,
+      "strokeColor": "#495057",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r34",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 864,
+      "y": 318,
+      "width": 770,
+      "height": 28,
+      "text": "VNet  vnet-ai-hub \u00b7 10.10.0.0/16",
+      "fontSize": 13,
+      "fontFamily": 3,
+      "strokeColor": "#000000",
+      "id": "t35",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 870,
+      "y": 352,
+      "width": 760,
+      "height": 66,
+      "strokeColor": "#495057",
+      "backgroundColor": "#FFFFFF",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r36",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 882,
+      "y": 360,
+      "width": 740,
+      "height": 43,
+      "text": "snet-apim-outbound \u00b7 10.10.1.0/24\ndelegated Microsoft.Web/serverFarms \u00b7 NSG attached",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t37",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 870,
+      "y": 426,
+      "width": 760,
+      "height": 58,
+      "strokeColor": "#495057",
+      "backgroundColor": "#FFFFFF",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r38",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 882,
+      "y": 438,
+      "width": 740,
+      "height": 24,
+      "text": "snet-private-endpoints \u00b7 10.10.2.0/24",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t39",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 870,
+      "y": 492,
+      "width": 760,
+      "height": 58,
+      "strokeColor": "#495057",
+      "backgroundColor": "#FFFFFF",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r40",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 882,
+      "y": 504,
+      "width": 740,
+      "height": 24,
+      "text": "snet-shared-services \u00b7 10.10.3.0/24",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t41",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 850,
+      "y": 628,
+      "width": 800,
+      "height": 108,
+      "strokeColor": "#F7630C",
+      "backgroundColor": "#FFF4CE",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r42",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 864,
+      "y": 638,
+      "width": 770,
+      "height": 67,
+      "text": "APIM Standard v2  apim-ai-gw  \u2014 AI Gateway\nPer-team products + subscription keys \u00b7 token-limit \u00b7 MSI routing\nOutbound \u2192 apim subnet \u00b7 Inbound PE \u2192 PE subnet",
+      "fontSize": 12,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t43",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 850,
+      "y": 752,
+      "width": 800,
+      "height": 116,
+      "strokeColor": "#0078D4",
+      "backgroundColor": "#CFE4FA",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r44",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 864,
+      "y": 762,
+      "width": 770,
+      "height": 67,
+      "text": "Foundry  fndry-central  (AIServices) \u2014 governed\nProject: proj-central \u00b7 PE \u2192 PE subnet\nModel: enterprise-gpt5-mini (gpt-5-mini \u00b7 GlobalStandard)",
+      "fontSize": 12,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t45",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 850,
+      "y": 884,
+      "width": 800,
+      "height": 96,
+      "strokeColor": "#495057",
+      "backgroundColor": "#F3F2F1",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r46",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 864,
+      "y": 894,
+      "width": 770,
+      "height": 62,
+      "text": "Private DNS zones (8): azure-api \u00b7 cognitiveservices \u00b7 openai \u00b7 services.ai\n\u00b7 search \u00b7 documents \u00b7 blob \u00b7 vaultcore\nLinked to hub + both spokes",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t47",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 850,
+      "y": 996,
+      "width": 800,
+      "height": 144,
+      "strokeColor": "#0078D4",
+      "backgroundColor": "#EAF3FC",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r48",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 864,
+      "y": 1008,
+      "width": 770,
+      "height": 80,
+      "text": "Central cloud team access (what they own):\n\u2022 Govern the hub: approve & host the model centrally\n\u2022 Own APIM gateway, products, keys & policies\n\u2022 NO access to team spokes or team BYO data",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t49",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 1720,
+      "y": 250,
+      "width": 740,
+      "height": 1180,
+      "strokeColor": "#5C2D91",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 3,
+      "id": "r50",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 1736,
+      "y": 262,
+      "width": 710,
+      "height": 31,
+      "text": "RG  rg-ai-team-b-swc-dev   (spoke)",
+      "fontSize": 15,
+      "fontFamily": 3,
+      "strokeColor": "#000000",
+      "id": "t51",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 1750,
+      "y": 308,
+      "width": 680,
+      "height": 300,
+      "strokeColor": "#495057",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r52",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 1764,
+      "y": 318,
+      "width": 650,
+      "height": 28,
+      "text": "VNet  vnet-ai-team-b \u00b7 10.30.0.0/16",
+      "fontSize": 13,
+      "fontFamily": 3,
+      "strokeColor": "#000000",
+      "id": "t53",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 1770,
+      "y": 352,
+      "width": 640,
+      "height": 66,
+      "strokeColor": "#495057",
+      "backgroundColor": "#FFFFFF",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r54",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 1782,
+      "y": 360,
+      "width": 620,
+      "height": 43,
+      "text": "snet-foundry-agents \u00b7 10.30.1.0/24\ndelegated Microsoft.app/environments",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t55",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 1770,
+      "y": 426,
+      "width": 640,
+      "height": 58,
+      "strokeColor": "#495057",
+      "backgroundColor": "#FFFFFF",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r56",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 1782,
+      "y": 438,
+      "width": 620,
+      "height": 24,
+      "text": "snet-private-endpoints \u00b7 10.30.2.0/24",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t57",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 1770,
+      "y": 492,
+      "width": 640,
+      "height": 58,
+      "strokeColor": "#495057",
+      "backgroundColor": "#FFFFFF",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r58",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 1782,
+      "y": 504,
+      "width": 620,
+      "height": 24,
+      "text": "snet-team-apps \u00b7 10.30.3.0/24",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t59",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 1750,
+      "y": 628,
+      "width": 680,
+      "height": 118,
+      "strokeColor": "#5C2D91",
+      "backgroundColor": "#E8DAEF",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r60",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 1764,
+      "y": 640,
+      "width": 650,
+      "height": 67,
+      "text": "Foundry  fndry-team-b  (AIServices)\nProject: proj-team-b\nAgents injected \u2192 agents subnet \u00b7 PE \u2192 PE subnet",
+      "fontSize": 12,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t61",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "text",
+      "x": 1750,
+      "y": 762,
+      "width": 680,
+      "height": 26,
+      "text": "BYO data (Team B) \u2014 each via Private Endpoint",
+      "fontSize": 12,
+      "fontFamily": 3,
+      "strokeColor": "#000000",
+      "id": "t62",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 1750,
+      "y": 792,
+      "width": 335,
+      "height": 80,
+      "strokeColor": "#0c8599",
+      "backgroundColor": "#99e9f2",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r63",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 1762,
+      "y": 804,
+      "width": 325,
+      "height": 43,
+      "text": "Storage (Blob)\nPE \u2192 PE subnet",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t64",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 2095,
+      "y": 792,
+      "width": 335,
+      "height": 80,
+      "strokeColor": "#0c8599",
+      "backgroundColor": "#99e9f2",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r65",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 2107,
+      "y": 804,
+      "width": 325,
+      "height": 43,
+      "text": "AI Search\nPE \u2192 PE subnet",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t66",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 1750,
+      "y": 882,
+      "width": 335,
+      "height": 80,
+      "strokeColor": "#0c8599",
+      "backgroundColor": "#99e9f2",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r67",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 1762,
+      "y": 894,
+      "width": 325,
+      "height": 43,
+      "text": "Cosmos DB (SQL)\nPE \u2192 PE subnet",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t68",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 2095,
+      "y": 882,
+      "width": 335,
+      "height": 80,
+      "strokeColor": "#0c8599",
+      "backgroundColor": "#99e9f2",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r69",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 2107,
+      "y": 894,
+      "width": 325,
+      "height": 43,
+      "text": "Key Vault\nPE \u2192 PE subnet",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t70",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 1750,
+      "y": 990,
+      "width": 680,
+      "height": 150,
+      "strokeColor": "#D13438",
+      "backgroundColor": "#FDE7E9",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r71",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 1764,
+      "y": 1002,
+      "width": 650,
+      "height": 80,
+      "text": "Team B access (where they work):\n\u2022 Work ONLY in proj-team-b within this spoke\n\u2022 Data-plane RBAC: fndry-team-b MSI \u2192 own Storage/Search/Cosmos/Key Vault\n\u2022 Consume the central model ONLY via APIM (no direct access)",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t72",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 820,
+      "y": 1470,
+      "width": 860,
+      "height": 150,
+      "strokeColor": "#495057",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 3,
+      "id": "r73",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 836,
+      "y": 1482,
+      "width": 830,
+      "height": 31,
+      "text": "RG  rg-ai-observability-swc-dev",
+      "fontSize": 15,
+      "fontFamily": 3,
+      "strokeColor": "#000000",
+      "id": "t74",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 850,
+      "y": 1516,
+      "width": 800,
+      "height": 86,
+      "strokeColor": "#495057",
+      "backgroundColor": "#F3F2F1",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r75",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 864,
+      "y": 1526,
+      "width": 770,
+      "height": 43,
+      "text": "Log Analytics  law-ai  +  Application Insights  appi-ai\nDiagnostic settings from APIM \u00b7 Foundry (central + teams) \u00b7 Storage/Search/Cosmos/Key Vault",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t76",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "arrow",
+      "x": 850,
+      "y": 470,
+      "width": -100,
+      "height": 0,
+      "strokeColor": "#495057",
+      "strokeWidth": 3,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -100,
+          0
+        ]
+      ],
+      "id": "a77",
+      "endArrowhead": "arrow",
+      "startArrowhead": "arrow"
+    },
+    {
+      "type": "text",
+      "x": 770,
+      "y": 420,
+      "width": 260,
+      "height": 24,
+      "text": "VNet peering",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t78",
+      "textAlign": "center",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "arrow",
+      "x": 1650,
+      "y": 470,
+      "width": 100,
+      "height": 0,
+      "strokeColor": "#495057",
+      "strokeWidth": 3,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          100,
+          0
+        ]
+      ],
+      "id": "a79",
+      "endArrowhead": "arrow",
+      "startArrowhead": "arrow"
+    },
+    {
+      "type": "text",
+      "x": 1570,
+      "y": 420,
+      "width": 260,
+      "height": 24,
+      "text": "VNet peering",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t80",
+      "textAlign": "center",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "arrow",
+      "x": 750,
+      "y": 687,
+      "width": 100,
+      "height": -5,
+      "strokeColor": "#F7630C",
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          100,
+          -5
+        ]
+      ],
+      "id": "a81",
+      "endArrowhead": "arrow",
+      "strokeStyle": "dashed"
+    },
+    {
+      "type": "text",
+      "x": 770,
+      "y": 640,
+      "width": 300,
+      "height": 40,
+      "text": "uses model via APIM\n(connection)",
+      "fontSize": 10,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t82",
+      "textAlign": "center",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "arrow",
+      "x": 1750,
+      "y": 687,
+      "width": -100,
+      "height": -5,
+      "strokeColor": "#F7630C",
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -100,
+          -5
+        ]
+      ],
+      "id": "a83",
+      "endArrowhead": "arrow",
+      "strokeStyle": "dashed"
+    },
+    {
+      "type": "text",
+      "x": 1540,
+      "y": 640,
+      "width": 300,
+      "height": 40,
+      "text": "uses model via APIM\n(connection)",
+      "fontSize": 10,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t84",
+      "textAlign": "center",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "arrow",
+      "x": 1250,
+      "y": 736,
+      "width": 0,
+      "height": 16,
+      "strokeColor": "#0078D4",
+      "strokeWidth": 3,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          16
+        ]
+      ],
+      "id": "a85",
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "text",
+      "x": 1260,
+      "y": 724,
+      "width": 360,
+      "height": 23,
+      "text": "MSI: Cognitive Services OpenAI User",
+      "fontSize": 10,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t86",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "arrow",
+      "x": 400,
+      "y": 180,
+      "width": 10,
+      "height": 448,
+      "strokeColor": "#107C10",
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          10,
+          448
+        ]
+      ],
+      "id": "a87",
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "arrow",
+      "x": 1250,
+      "y": 180,
+      "width": 0,
+      "height": 448,
+      "strokeColor": "#0078D4",
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          448
+        ]
+      ],
+      "id": "a88",
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "arrow",
+      "x": 2100,
+      "y": 180,
+      "width": -10,
+      "height": 448,
+      "strokeColor": "#5C2D91",
+      "strokeWidth": 2,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -10,
+          448
+        ]
+      ],
+      "id": "a89",
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "rectangle",
+      "x": 850,
+      "y": 1180,
+      "width": 800,
+      "height": 70,
+      "strokeColor": "#D13438",
+      "backgroundColor": "#FDE7E9",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r90",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 864,
+      "y": 1190,
+      "width": 770,
+      "height": 43,
+      "text": "Isolation enforced: teams CANNOT call the central model endpoint directly\n(public access disabled \u2192 403; only APIM MSI is granted the data-plane role).",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t91",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "gridSize": null
+  }
+}

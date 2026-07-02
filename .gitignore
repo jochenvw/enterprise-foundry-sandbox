@@ -1,0 +1,11 @@
+# Compiled Bicep / ARM artifacts
+infra/**/*.json
+!infra/main.parameters*.json
+
+# Local environment
+*.env
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
