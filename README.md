@@ -18,8 +18,9 @@ the deploy script auto-detects that IP for you.
 
 ## What gets deployed
 
-- **Observability**: Log Analytics Workspace + Application Insights, with diagnostic
-  settings on every supported resource.
+- **Observability**: central Log Analytics Workspace + Application Insights for the hub,
+  plus per-team Log Analytics Workspace + Application Insights in each spoke, with
+  diagnostic settings on every supported resource.
 - **Hub** (`rg-ai-hub-swc-dev`): hub VNet, APIM v2 AI Gateway (deployed or BYO), central
   Foundry (`AIServices`) + project + model deployment, private DNS zones.
 - **Spokes** (`rg-ai-team-a-swc-dev`, `rg-ai-team-b-swc-dev`): per-team VNet, Foundry

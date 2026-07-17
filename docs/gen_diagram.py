@@ -135,7 +135,7 @@ text(bx+44,1002,bw-90,"Team B access (where they work):\n• Work ONLY in proj-t
 rect(hx,1470,hw,150,GRAY_S,"transparent",sw=3)
 text(hx+16,1482,hw-30,"RG  rg-ai-observability-swc-dev",15,bold=True)
 rect(hx+30,1516,hw-60,86,GRAY_S,GRAY_B)
-text(hx+44,1526,hw-90,"Log Analytics  law-ai  +  Application Insights  appi-ai\nDiagnostic settings from APIM · Foundry (central + teams) · Storage/Search/Cosmos/Key Vault",11)
+text(hx+44,1526,hw-90,"Central + team Log Analytics / Application Insights\nDiagnostic settings from APIM · Foundry (central + teams) · Storage/Search/Cosmos/Key Vault",11)
 
 # ================= ARROWS / RELATIONS =================
 # Peering hub <-> team A  (left edge of hub vnet to right edge of team A vnet)

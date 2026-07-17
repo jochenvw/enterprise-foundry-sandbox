@@ -1086,7 +1086,7 @@
       "y": 1526,
       "width": 770,
       "height": 43,
-      "text": "Log Analytics  law-ai  +  Application Insights  appi-ai\nDiagnostic settings from APIM \u00b7 Foundry (central + teams) \u00b7 Storage/Search/Cosmos/Key Vault",
+      "text": "Central + team Log Analytics / Application Insights\nDiagnostic settings from APIM \u00b7 Foundry (central + teams) \u00b7 Storage/Search/Cosmos/Key Vault",
       "fontSize": 11,
       "fontFamily": 2,
       "strokeColor": "#000000",

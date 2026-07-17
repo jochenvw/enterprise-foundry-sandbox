@@ -11,7 +11,7 @@ flowchart LR
     subgraph HUB["Hub / Platform"]
         APIM["APIM v2\nAI Gateway"]
         CF["Central Foundry\nApproved model deployments"]
-        LAW["Log Analytics\nApplication Insights"]
+        LAW_C["Central Log Analytics\nCentral Application Insights"]
         DNS["Private DNS Zones"]
     end
 
@@ -19,12 +19,14 @@ flowchart LR
         TAF["Team A Foundry"]
         TAA["Team A Agents / Apps"]
         TADS["Team A BYO Data Services\nStorage / Cosmos / AI Search"]
+        LAW_A["Team A Log Analytics\nTeam A Application Insights"]
     end
 
     subgraph TEAM_B["Team B Spoke"]
         TBF["Team B Foundry"]
         TBA["Team B Agents / Apps"]
         TBDS["Team B BYO Data Services\nStorage / Cosmos / AI Search"]
+        LAW_B["Team B Log Analytics\nTeam B Application Insights"]
     end
 
     TAA -->|private inference call| APIM
@@ -33,12 +35,14 @@ flowchart LR
     TBF -->|APIM-backed model connection| APIM
     APIM -->|managed identity / governed route| CF
 
-    APIM --> LAW
-    CF --> LAW
-    TAF --> LAW
-    TBF --> LAW
-    TADS --> LAW
-    TBDS --> LAW
+    APIM --> LAW_C
+    CF --> LAW_C
+    TAF --> LAW_A
+    TADS --> LAW_A
+    TBF --> LAW_B
+    TBDS --> LAW_B
+    TAA -. telemetry/app instrumentation .-> LAW_A
+    TBA -. telemetry/app instrumentation .-> LAW_B
 
     DNS --- APIM
     DNS --- CF
@@ -86,9 +90,11 @@ POST /ai/team-b/models/enterprise-fast/chat/completions
 POST /ai/team-b/models/enterprise-reasoning/chat/completions
 ```
 
-### Observability (hub-adjacent)
-A Log Analytics Workspace + Application Insights. Every supported resource sends
-diagnostic settings here; APIM also logs to Application Insights.
+### Observability
+The hub has a central Log Analytics Workspace + Application Insights for APIM and the
+central Foundry. Each team spoke also has its own Log Analytics Workspace + Application
+Insights, and that team's Foundry account plus BYO data resources send diagnostics to it.
+Team-built agents/apps can point at the team-local Application Insights instance.
 
 ## Why these choices
 

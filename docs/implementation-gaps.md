@@ -71,9 +71,9 @@ resource ID.
 using explicit, per-resource category arrays (`categoryGroup: allLogs` + relevant
 metrics). This is the approach the instructions explicitly permit ("define per-resource
 category arrays carefully in the calling modules") and guarantees only valid categories
-are used. Resources covered: APIM, central and team Foundry accounts, Storage (blob
-service), Cosmos DB, AI Search, and Key Vault — all to the central Log Analytics
-workspace.
+are used. Resources covered: APIM and the central Foundry to the central Log Analytics
+workspace; each team Foundry account plus Storage (blob service), Cosmos DB, AI Search,
+and Key Vault to that team's Log Analytics workspace.
 
 ## 5. Model version "latest"
 

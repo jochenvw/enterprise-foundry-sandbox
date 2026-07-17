@@ -232,6 +232,28 @@ module observability 'modules/observability.bicep' = {
   }
 }
 
+module observabilityTeamA 'modules/observability.bicep' = {
+  name: 'observability-team-a'
+  scope: rgTeamA
+  params: {
+    location: location
+    tags: tags
+    logAnalyticsName: 'law-${namePrefix}-${teamNames[0]}-${nameSuffix}'
+    appInsightsName: 'appi-${namePrefix}-${teamNames[0]}-${nameSuffix}'
+  }
+}
+
+module observabilityTeamB 'modules/observability.bicep' = {
+  name: 'observability-team-b'
+  scope: rgTeamB
+  params: {
+    location: location
+    tags: tags
+    logAnalyticsName: 'law-${namePrefix}-${teamNames[1]}-${nameSuffix}'
+    appInsightsName: 'appi-${namePrefix}-${teamNames[1]}-${nameSuffix}'
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Networking: hub + two spokes + bidirectional peering
 // -----------------------------------------------------------------------------
@@ -399,7 +421,7 @@ module teamAData 'modules/foundry-team-data.bicep' = {
     allowedClientIp: effectiveAllowedClientIp
     searchSkuName: searchSkuName
     privateEndpointsSubnetId: networkTeamA.outputs.privateEndpointsSubnetId
-    logAnalyticsWorkspaceId: observability.outputs.logAnalyticsWorkspaceId
+    logAnalyticsWorkspaceId: observabilityTeamA.outputs.logAnalyticsWorkspaceId
     blobPrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxBlob]
     cosmosPrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxCosmos]
     searchPrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxSearch]
@@ -421,7 +443,7 @@ module teamBData 'modules/foundry-team-data.bicep' = {
     allowedClientIp: effectiveAllowedClientIp
     searchSkuName: searchSkuName
     privateEndpointsSubnetId: networkTeamB.outputs.privateEndpointsSubnetId
-    logAnalyticsWorkspaceId: observability.outputs.logAnalyticsWorkspaceId
+    logAnalyticsWorkspaceId: observabilityTeamB.outputs.logAnalyticsWorkspaceId
     blobPrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxBlob]
     cosmosPrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxCosmos]
     searchPrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxSearch]
@@ -476,7 +498,7 @@ module foundryTeamA 'modules/foundry-team.bicep' = {
     cognitivePrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxCognitive]
     openAiPrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxOpenAi]
     aiServicesPrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxAiServices]
-    logAnalyticsWorkspaceId: observability.outputs.logAnalyticsWorkspaceId
+    logAnalyticsWorkspaceId: observabilityTeamA.outputs.logAnalyticsWorkspaceId
   }
 }
 
@@ -498,7 +520,7 @@ module foundryTeamB 'modules/foundry-team.bicep' = {
     cognitivePrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxCognitive]
     openAiPrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxOpenAi]
     aiServicesPrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxAiServices]
-    logAnalyticsWorkspaceId: observability.outputs.logAnalyticsWorkspaceId
+    logAnalyticsWorkspaceId: observabilityTeamB.outputs.logAnalyticsWorkspaceId
   }
 }
 
@@ -700,6 +722,18 @@ output hubResourceGroup string = rgHub.name
 output teamAResourceGroup string = rgTeamA.name
 output teamBResourceGroup string = rgTeamB.name
 output logAnalyticsWorkspaceId string = observability.outputs.logAnalyticsWorkspaceId
+output teamALogAnalyticsWorkspaceName string = observabilityTeamA.outputs.logAnalyticsWorkspaceName
+output teamBLogAnalyticsWorkspaceName string = observabilityTeamB.outputs.logAnalyticsWorkspaceName
+output teamAAppInsightsName string = observabilityTeamA.outputs.appInsightsName
+output teamBAppInsightsName string = observabilityTeamB.outputs.appInsightsName
+output teamAAppInsightsId string = observabilityTeamA.outputs.appInsightsId
+output teamBAppInsightsId string = observabilityTeamB.outputs.appInsightsId
+@secure()
+output teamAAppInsightsConnectionString string = observabilityTeamA.outputs.appInsightsConnectionString
+@secure()
+output teamBAppInsightsConnectionString string = observabilityTeamB.outputs.appInsightsConnectionString
+output teamALogAnalyticsWorkspaceId string = observabilityTeamA.outputs.logAnalyticsWorkspaceId
+output teamBLogAnalyticsWorkspaceId string = observabilityTeamB.outputs.logAnalyticsWorkspaceId
 output uniqueSuffix string = uniqueSuffix
 output apimName string = apimGateway.outputs.apimName
 output apimResourceGroup string = apimResourceGroupName
