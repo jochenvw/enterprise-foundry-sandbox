@@ -1115,7 +1115,7 @@
       "y": 1526,
       "width": 770,
       "height": 62,
-      "text": "Central + team Log Analytics / Application Insights\nDiagnostic settings from Foundry (central + teams) \u00b7 Storage/Search/Cosmos/Key Vault\nAI Gateway OpenTelemetry export: manual post-deploy step",
+      "text": "Central + team Log Analytics / Application Insights\nDiagnostic settings from Foundry (central + teams) \u00b7 Storage/Search/Cosmos/Key Vault\nAI Gateway OpenTelemetry to central App Insights · agent tracing per team",
       "fontSize": 11,
       "fontFamily": 2,
       "strokeColor": "#000000",

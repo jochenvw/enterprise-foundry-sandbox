@@ -133,6 +133,8 @@ flowchart LR
 | `scripts/test-gateway-inference.sh` | Team A alias, Chat Completions and Responses → `200` |
 | `scripts/test-team-isolation.sh` | Team B alias → `401`/`403`; raw deployment name / unpublished model → `4xx` |
 | `scripts/test-foundry-project-through-gateway.sh` | Team A project, `<connection>/<alias>` via Responses → `200` |
+| `scripts/test-agent-through-gateway.sh` | Creates/keeps prompt agent `team-a-demo-agent` (model `<connection>/<alias>`) and runs one turn → `completed` |
+| `scripts/test-end-to-end-trace.sh` | Runs the agent with a known trace ID; that ID appears in Team A App Insights (agent spans) and platform App Insights (gateway spans) |
 | `scripts/test-direct-central-foundry-blocked.sh` | Team account/project identities have no central roles, including inherited/group assignments; operator's direct v1 call is informational |
 
 `deploy.sh` passes the signed-in identity as `gatewayTestPrincipalId` (set
@@ -154,10 +156,15 @@ flowchart LR
   `Gateway` private endpoint and a zone named after the host minus its first label
   (for example `privatelink.swedencentral-01.ai.gateway.azure.com`), linked to the hub
   and both spokes.
-- **Telemetry requires asynchronous post-deployment integration.** The AI Gateway OpenTelemetry exporter
-  (`workspaces/telemetryExporters`) needs Application Insights OTLP ingestion and
-  Monitoring Metrics Publisher on a managed data collection rule, so it is a post-deploy
-  step. There are no gateway diagnostic settings or token metrics in Log Analytics.
+- **Telemetry is OpenTelemetry, not diagnostic settings.** The gateway has no diagnostic
+  settings. `deploy.sh` runs `scripts/postdeploy-gateway-telemetry.sh`, which waits for
+  the platform Application Insights OTLP endpoints and data collection rule (DCR), grants
+  the gateway identity Monitoring Metrics Publisher on that DCR, and deploys
+  `infra/modules/ai-gateway-telemetry.bicep` (`workspaces/telemetryExporters`, payload
+  capture off). A deny assignment on the managed DCR resource group prevents doing this
+  inside the main template. Set `SKIP_GATEWAY_TELEMETRY=1` to skip. Spans land in
+  `OTelSpans`/`OTelLogs` in the central Log Analytics workspace and on the Monitoring page
+  of the [AI Gateway portal](https://ai.gateway.azure.com).
 - **Token limits are per caller identity per alias.** Every identity that calls a team
   alias gets that team's full budget; with one project identity per team this equals a
   per-team budget.

@@ -58,8 +58,9 @@ invent ARM fields or delete/recreate the working projects. A migration needs a v
 API/schema and an explicit data/project transition plan.
 
 This repository has no hosted-agent source or pre-retirement hosted-agent deployment
-to migrate. The model-routing tests do not validate a complete agent runtime or its
-latest storage/identity lifecycle.
+to migrate. `scripts/test-agent-through-gateway.sh` keeps one prompt agent
+(`team-a-demo-agent`) in the Team A project that uses the hub model through the gateway;
+it does not exercise the BYO thread/file/vector stores.
 
 **Note (two-phase reliability):** the Microsoft foundry-samples reference deploys the project
 capability host as a separate phase after the account, because capability-host
@@ -75,22 +76,20 @@ sandbox.
 
 ## 4. AI Gateway telemetry
 
-**Gap:** The AI Gateway has no diagnostic settings for Log Analytics. Its OpenTelemetry
-exporter (`aigateways/workspaces/telemetryExporters`) needs Application Insights OTLP
-ingestion and **Monitoring Metrics Publisher** on a managed data collection rule, which
-appear asynchronously after ingestion is enabled. The managed resource group's deny
-assignment also prevents the usual Bicep role deployment. Gateway token metrics and request logs
-therefore do not reach Log Analytics.
+**Automated post-deploy step.** The AI Gateway has no diagnostic settings. Its
+OpenTelemetry exporter (`aigateways/workspaces/telemetryExporters`,
+`infra/modules/ai-gateway-telemetry.bicep`) needs Application Insights OTLP ingestion
+(enabled on the platform instance by `infra/modules/observability.bicep`) and
+**Monitoring Metrics Publisher** on the managed data collection rule. Those endpoints and
+the DCR appear asynchronously, and the managed resource group's deny assignment blocks the
+role deployment inside the main template. `deploy.sh` therefore runs
+`scripts/postdeploy-gateway-telemetry.sh`, which waits, grants the role, and deploys the
+exporter with payload capture disabled, following the
+[official monitoring lab](https://azure.github.io/aigateway/labs/13-monitoring/).
 
-**Compensation:** The exporter itself is supported declaratively. Follow the
-[official enterprise telemetry workflow](https://github.com/Azure/aigateway/tree/main/labs/21-enterprise-reference):
-enable Application Insights OTLP ingestion, wait for its endpoints/DCR, grant the gateway
-identity Monitoring Metrics Publisher on that DCR, then deploy the OpenTelemetry exporter
-with payload capture disabled. This is an asynchronous post-deployment integration,
-not an unsupported exporter feature. Central Foundry
-diagnostics are configured, but visibility of gateway-identity calls and request-level
-correlation have not been confirmed; do not rely on them as a substitute for gateway
-telemetry.
+**Verified:** `scripts/test-end-to-end-trace.sh` finds one trace ID in both the Team A
+Application Insights (agent spans) and the central workspace (`OTelSpans`, gateway spans).
+Gateway data lands in the OTel tables, not the classic Application Insights tables.
 
 ## Supported opt-ins
 

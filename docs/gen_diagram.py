@@ -140,7 +140,7 @@ text(hx+44,1192,hw-90,"Operator demo access (current network):\n• Deploy check
 rect(hx,1470,hw,150,GRAY_S,"transparent",sw=3)
 text(hx+16,1482,hw-30,"RG  rg-ai-observability-swc-dev",15,bold=True)
 rect(hx+30,1516,hw-60,86,GRAY_S,GRAY_B)
-text(hx+44,1526,hw-90,"Central + team Log Analytics / Application Insights\nDiagnostic settings from Foundry (central + teams) · Storage/Search/Cosmos/Key Vault\nAI Gateway OpenTelemetry export: manual post-deploy step",11)
+text(hx+44,1526,hw-90,"Central + team Log Analytics / Application Insights\nDiagnostic settings from Foundry (central + teams) · Storage/Search/Cosmos/Key Vault\nAI Gateway OpenTelemetry to central App Insights · agent tracing per team",11)
 
 # ================= ARROWS / RELATIONS =================
 # Peering hub <-> team A  (left edge of hub vnet to right edge of team A vnet)

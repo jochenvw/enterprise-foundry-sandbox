@@ -211,6 +211,8 @@ module observability 'modules/observability.bicep' = {
     tags: tags
     logAnalyticsName: 'law-${namePrefix}-${nameSuffix}'
     appInsightsName: 'appi-${namePrefix}-${nameSuffix}'
+    // Platform App Insights receives the AI Gateway's OpenTelemetry export.
+    enableOtlpIngestion: true
   }
 }
 
@@ -499,6 +501,39 @@ module foundryTeamB 'modules/foundry-team.bicep' = {
   }
 }
 
+// Foundry tracing: each account exports agent traces to its own App Insights
+// (central to the platform component, teams to their own), so the portal's
+// Tracing page works per project. Gateway spans land in the platform component.
+module tracingCentral 'modules/foundry-tracing-connection.bicep' = {
+  name: 'tracing-central'
+  scope: rgHub
+  params: {
+    foundryAccountName: foundryCentral.outputs.accountName
+    appInsightsId: observability.outputs.appInsightsId
+    appInsightsConnectionString: observability.outputs.appInsightsConnectionString
+  }
+}
+
+module tracingTeamA 'modules/foundry-tracing-connection.bicep' = {
+  name: 'tracing-team-a'
+  scope: rgTeamA
+  params: {
+    foundryAccountName: foundryTeamA.outputs.accountName
+    appInsightsId: observabilityTeamA.outputs.appInsightsId
+    appInsightsConnectionString: observabilityTeamA.outputs.appInsightsConnectionString
+  }
+}
+
+module tracingTeamB 'modules/foundry-tracing-connection.bicep' = {
+  name: 'tracing-team-b'
+  scope: rgTeamB
+  params: {
+    foundryAccountName: foundryTeamB.outputs.accountName
+    appInsightsId: observabilityTeamB.outputs.appInsightsId
+    appInsightsConnectionString: observabilityTeamB.outputs.appInsightsConnectionString
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Azure AI Gateway (hub). The gateway joins the hub integration subnet so its
 // managed identity reaches central Foundry through the private endpoint. Each
@@ -748,6 +783,8 @@ output hubResourceGroup string = rgHub.name
 output teamAResourceGroup string = rgTeamA.name
 output teamBResourceGroup string = rgTeamB.name
 output logAnalyticsWorkspaceId string = observability.outputs.logAnalyticsWorkspaceId
+output platformAppInsightsId string = observability.outputs.appInsightsId
+output platformAppInsightsName string = observability.outputs.appInsightsName
 output teamALogAnalyticsWorkspaceName string = observabilityTeamA.outputs.logAnalyticsWorkspaceName
 output teamBLogAnalyticsWorkspaceName string = observabilityTeamB.outputs.logAnalyticsWorkspaceName
 output teamAAppInsightsName string = observabilityTeamA.outputs.appInsightsName

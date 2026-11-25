@@ -64,6 +64,13 @@ echo "Deployment complete. Key outputs:"
 az deployment sub show --name "${DEPLOYMENT_NAME}" \
   --query "properties.outputs" -o jsonc || true
 
+# Gateway telemetry needs OTLP endpoints and a DCR role that only exist after
+# the deployment, so it is connected here. Set SKIP_GATEWAY_TELEMETRY=1 to skip.
+if [[ "${SKIP_GATEWAY_TELEMETRY:-0}" != "1" ]]; then
+  echo
+  bash "${SCRIPT_DIR}/postdeploy-gateway-telemetry.sh"
+fi
+
 # Always confirm the portal can reach Foundry and its data resources from here,
 # so live demos don't hit "protected by network access controls". New rules can
 # take several minutes to propagate. Set SKIP_DEMO_ACCESS_CHECK=1 (e.g. in CI).

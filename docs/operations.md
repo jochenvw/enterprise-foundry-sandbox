@@ -68,32 +68,45 @@ from converting the ARM scope to a local Windows path; it is harmless on other B
 
 ## Inspect logs and usage
 
-- **Gateway telemetry** is not configured by the template. Set up the AI Gateway
-  OpenTelemetry exporter (`workspaces/telemetryExporters`) after deployment; it needs
-  Application Insights OTLP ingestion and **Monitoring Metrics Publisher** on a managed
-  data collection rule. See the
-  [official enterprise telemetry workflow](https://github.com/Azure/aigateway/tree/main/labs/21-enterprise-reference).
-- **Central Log Analytics**: diagnostic settings from the central Foundry account,
-  but gateway-identity call visibility and request-level correlation have not been
-  confirmed.
+- **Gateway telemetry**: the AI Gateway OpenTelemetry exporter (configured by
+  `scripts/postdeploy-gateway-telemetry.sh`) sends spans, logs, and metrics to the
+  platform Application Insights. Query `OTelSpans`/`OTelLogs` in the central Log
+  Analytics workspace, or open the Monitoring page in the
+  [AI Gateway portal](https://ai.gateway.azure.com). Caller identity is in
+  `azure.ai_gateway.identity.claims.oid` / `.appid`; the alias is `gen_ai.request.model`.
+- **Central Log Analytics**: also receives diagnostic settings from the central Foundry
+  account.
 - **Team Log Analytics**: diagnostic settings from that team's Foundry, Storage, Cosmos,
-  Search, and Key Vault; team-built agents/apps can also use the team-local
-  Application Insights instance.
+  Search, and Key Vault. The team Foundry account has an `AppInsights` connection
+  (`<account>-appinsights`), so agent runs appear in the team's Application Insights
+  (`AppDependencies`) and on the project's **Tracing** page in the Foundry portal.
 
-## Trace a model call from team alias to central backend
+```kusto
+// Central workspace: gateway calls per alias and caller
+OTelSpans
+| where Name == "POST /default/models/*"
+| extend alias = tostring(Attributes["gen_ai.request.model"]),
+         caller = tostring(Attributes["azure.ai_gateway.identity.claims.oid"]),
+         status = toint(Attributes["http.response.status_code"])
+| summarize calls = count() by alias, caller, status
+```
 
-1. Capture the client request time and response headers from the gateway call.
-2. If the OpenTelemetry exporter is configured, find the gateway span in Application
-   Insights and note the alias and status.
-3. Central Foundry diagnostics may provide backend-side evidence, but request-level
-   correlation to a gateway alias has not been verified. Do not treat this as a
-   supported end-to-end trace until the gateway exporter is configured and validated.
+## Trace a call from team agent to central backend
+
+`./scripts/test-end-to-end-trace.sh` does this automatically. Manually:
+
+1. Note the W3C trace ID of the agent run (the `traceparent` sent to the project, or the
+   `OperationId` of the `invoke_agent` span in the team's Application Insights).
+2. In the team workspace: `AppDependencies | where OperationId == "<trace-id>"` shows
+   `invoke_agent <agent>` and `chat <connection>/<alias>`.
+3. In the central workspace: `OTelSpans | where TraceId == "<trace-id>"` shows the
+   gateway spans (`inbound`, `policy tokenLimit`, `backend`, `outbound`) for the same call.
 
 ## Estimate cost by team
 
 Each team has its own alias, so per-alias token usage is the per-team attribution signal.
-It requires the gateway's OpenTelemetry exporter. Without it, central Foundry metrics
-show only the total for the shared deployment.
+It comes from the gateway's OpenTelemetry data in the central workspace; central Foundry
+metrics alone show only the total for the shared deployment.
 
 Gateway billing starts January 1, 2027. Review the current request allowance, paid tiers,
 and service fee in the

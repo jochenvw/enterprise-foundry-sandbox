@@ -113,6 +113,9 @@ case "$*" in
     [[ "${MOCK_FAILURE:-}" == missing-project-identity ]] || echo project-principal ;;
   *cognitiveservices\\ account\\ show*--query\\ identity.principalId*)
     [[ "${MOCK_FAILURE:-}" == missing-account-identity ]] || echo account-principal ;;
+  *resource\\ show*properties.customerId*) echo workspace-guid ;;
+  *rest\\ --method\\ post*api.loganalytics.azure.com*)
+    [[ "${MOCK_FAILURE:-}" == trace ]] && echo 0 || echo 3 ;;
   *cognitiveservices\\ account\\ show*--query\\ id*) echo /subscriptions/test/resourceGroups/rg/providers/Microsoft.CognitiveServices/accounts/acct ;;
   *account\\ show*) echo '{}' ;;
   *) exit 1 ;;
@@ -141,6 +144,13 @@ elif [[ "$request" == *.blob.core.windows.net* || "$request" == *.documents.azur
   fail not-found && code=404
 elif [[ "$request" == *central.openai.azure.com* ]]; then
   code=200
+elif [[ "$request" == *proj-a.example/api/projects/a/agents/team-a-demo-agent?api-version=v1* ]]; then
+  echo '{}'; exit 0
+elif [[ "$request" == *proj-a.example/api/projects/a/agents/team-a-demo-agent/versions* && "$request" == *conn/team-a-model* ]]; then
+  code=200
+elif [[ "$request" == *proj-a.example/api/projects/a/openai/v1/responses* && "$request" == *agent_reference* && "$request" == *traceparent:\\ 00-* ]]; then
+  code=200
+  printf '%s' '{"status":"completed","output":[{"type":"message","content":[{"text":"Routing and policy."}]}]}' > "$out"
 elif [[ "$request" == *proj-a.example/api/projects/a/openai/v1/responses* && "$request" == *conn/team-a-model* ]]; then
   code=200; fail project && code=500
 elif [[ "$request" == *gw.example/default/models/openai/v1/* && "$request" == *gateway-token* && "$request" == *'"model":"team-a-model"'* ]]; then
@@ -169,6 +179,7 @@ printf '%s' "$code"
             "RETRY_DELAY": "0",
             "DEMO_ACCESS_ATTEMPTS": str(attempts),
             "DEMO_ACCESS_DELAY": "0",
+            "TRACE_WAIT_ATTEMPTS": "1",
             "SCRIPT_NAME": script,
         }
         for name in ("AI_GATEWAY_RESOURCE", "FOUNDRY_DATA_RESOURCE", "NETWORK_ACCESS_MODE",
@@ -215,6 +226,14 @@ printf '%s' "$code"
         self.assertIn("indexes?api-version=2026-04-01", calls)
         self.assertIn("secrets?api-version=2026-04-01", calls)
         self.assertIn('"model":"deployed-model"', calls)
+        self.assertIn("agents/team-a-demo-agent/versions?api-version=v1", calls)
+        self.assertIn('"agent_reference"', calls)
+        self.assertIn("PASS: one trace ID links", result.stdout)
+
+    def test_missing_trace_fails(self):
+        result, _ = self.run_script("trace", script="test-end-to-end-trace.sh")
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("did not reach both workspaces", result.stderr)
 
     def test_role_propagation_is_retried(self):
         result, calls = self.run_script("propagation")

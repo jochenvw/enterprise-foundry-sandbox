@@ -24,10 +24,12 @@ shared-key access and anonymous blobs. Cosmos also disables key-based metadata w
 Application Insights connection strings use `@secure()` parameters and outputs; the
 unused instrumentation-key output has been removed.
 
-## No gateway request logging by default
-The template configures no gateway telemetry, so prompts and responses are not logged at
-the gateway. Enabling the OpenTelemetry exporter is a deliberate post-deploy step; review
-what it captures before enabling it.
+## Gateway telemetry without payloads
+The gateway OpenTelemetry exporter sends metrics, logs, and traces to the platform
+Application Insights with `payloadCapture` disabled, so prompts and responses are not
+logged. It records the caller's token claims (`tid`, `oid`, `appid`/`azp`) for per-team
+attribution. It authenticates with the gateway managed identity, not an ingestion key.
+Foundry tracing connections send agent spans to each team's own Application Insights.
 
 ## Private endpoints enabled
 The entrypoint always creates private endpoints. Storage (blob), Cosmos DB (Sql), AI Search, Key Vault, the

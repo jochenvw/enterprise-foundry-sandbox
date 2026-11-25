@@ -38,7 +38,7 @@ flowchart LR
     TBF -->|gateway model connection| AIGW
     AIGW -->|managed identity via VNet integration + PE| CF
 
-    AIGW -. OpenTelemetry (manual setup) .-> LAW_C
+    AIGW -. OpenTelemetry .-> LAW_C
     CF --> LAW_C
     TAF --> LAW_A
     TADS --> LAW_A
@@ -47,8 +47,8 @@ flowchart LR
     OP -. allowlisted data-plane access .-> CF
     OP -. allowlisted data-plane access .-> TAF
     OP -. allowlisted data-plane access .-> TBF
-    TAA -. telemetry/app instrumentation .-> LAW_A
-    TBA -. telemetry/app instrumentation .-> LAW_B
+    TAA -. agent tracing .-> LAW_A
+    TBA -. agent tracing .-> LAW_B
 
     DNS --- CF
     DNS --- TAF
@@ -110,9 +110,12 @@ See [`ai-gateway.md`](ai-gateway.md) for details and caveats.
 ### Observability
 The hub has a central Log Analytics Workspace + Application Insights; the central
 Foundry sends diagnostics to it. The AI Gateway has no diagnostic settings; its
-OpenTelemetry exporter is a manual post-deploy step (see `implementation-gaps.md`). Each team spoke also has its own Log Analytics Workspace + Application
+OpenTelemetry exporter sends spans, logs, and metrics to the central Application Insights
+(OTLP ingestion), configured by `scripts/postdeploy-gateway-telemetry.sh`. Each team spoke also has its own Log Analytics Workspace + Application
 Insights, and that team's Foundry account plus BYO data resources send diagnostics to it.
-Team-built agents/apps can point at the team-local Application Insights instance.
+Each Foundry account has an `AppInsights` tracing connection to its own Application
+Insights, so agent runs are traced per team. A W3C trace ID links a team agent's spans
+to the gateway spans in the central workspace.
 Diagnostics are inline extension resources with typed scopes and resource-specific
 categories. Application Insights connection strings, not standalone instrumentation
 keys, are exposed as secure outputs.
@@ -139,7 +142,7 @@ authorization. See [`demo-access.md`](demo-access.md).
   alias-scoped Entra RBAC are declarative resources, with no policy XML, products, or
   subscription keys. It also supports outbound VNet integration and an inbound private
   endpoint. Those networking features and Foundry model connections remain preview;
-  telemetry needs an asynchronous post-deployment integration.
+  telemetry uses an OpenTelemetry exporter configured after deployment.
 
 ## Intentional exclusions
 
@@ -169,5 +172,6 @@ authorization. See [`demo-access.md`](demo-access.md).
    applies the alias's token limit (and content safety, if enabled).
 3. The gateway calls the central Foundry deployment with its managed identity over the
    hub VNet integration and private endpoint, and returns the response.
-4. Gateway telemetry is available only after configuring its OpenTelemetry exporter;
-   central and team Foundry diagnostics flow to Log Analytics.
+4. The gateway exports OpenTelemetry to the central Application Insights; team agents
+   trace to their team Application Insights, linked by trace ID. Central and team
+   Foundry diagnostics flow to Log Analytics.

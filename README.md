@@ -107,13 +107,15 @@ model connections remain preview.
 - Demo access uses detected egress ranges, normally widened to `/24`; the development
   parameters opt Storage, Cosmos DB, and Key Vault out of the applicable tenant policy.
   Review the broader policy exemption before using it outside a demo environment.
-- Gateway telemetry (OpenTelemetry exporter) is a manual post-deploy step.
+- Gateway telemetry (OpenTelemetry exporter) is configured by a post-deploy script
+  that `deploy.sh` runs; Foundry agent tracing goes to each team's App Insights.
 - No PTU, no Azure Firewall, no CMK, no availability zones — intentional, low-cost scope.
 
 ## Intentional gaps
 
-A few items are not automated today: gateway telemetry export, the gated inbound private
-endpoint, and migration to Foundry's newer capability-settings setup. Each is
+A few items are not automated in the main template: the gated inbound private
+endpoint and migration to Foundry's newer capability-settings setup. Gateway telemetry
+needs a post-deploy step that `deploy.sh` runs. Each is
 documented in [`docs/implementation-gaps.md`](docs/implementation-gaps.md). The team
 project → gateway model connections are created by the template itself
 (`infra/modules/foundry-model-connection.bicep`). Content safety is supported and

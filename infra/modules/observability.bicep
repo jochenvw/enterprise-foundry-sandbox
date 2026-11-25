@@ -18,6 +18,9 @@ param appInsightsName string
 @minValue(30)
 param retentionInDays int = 30
 
+@description('Turn on OTLP ingestion so OpenTelemetry senders such as AI Gateway can export here. Azure then creates a managed Azure Monitor workspace, data collection endpoint, and data collection rule; the OTLP endpoints appear a few minutes later.')
+param enableOtlpIngestion bool = false
+
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2026-03-01' = {
   name: logAnalyticsName
   location: location
@@ -38,12 +41,16 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   location: location
   tags: tags
   kind: 'web'
-  properties: {
-    Application_Type: 'web'
-    WorkspaceResourceId: logAnalytics.id
-    publicNetworkAccessForIngestion: 'Enabled'
-    publicNetworkAccessForQuery: 'Enabled'
-  }
+  // AzureMonitorWorkspaceIngestionMode is not in the Bicep types for this API version yet, so union() adds it.
+  properties: union(
+    {
+      Application_Type: 'web'
+      WorkspaceResourceId: logAnalytics.id
+      publicNetworkAccessForIngestion: 'Enabled'
+      publicNetworkAccessForQuery: 'Enabled'
+    },
+    enableOtlpIngestion ? { AzureMonitorWorkspaceIngestionMode: 'Enabled' } : {}
+  )
 }
 
 output logAnalyticsWorkspaceId string = logAnalytics.id

@@ -67,7 +67,7 @@ Available capabilities are not automatically enabled or claimed as tested.
 | Key Vault | Secrets data-plane `2026-04-01` is the latest published stable spec. RBAC, soft delete, and private endpoints are used; irreversible purge protection is intentionally not enabled for disposable demos. |
 | Azure networking / Private DNS | Latest stable schemas above; hub/spoke peering, private endpoints, DNS links, and subnet delegation are retained. Both supported modes always provision private endpoints; an empty operator allowlist disables public access. Peering is not an authorization boundary. |
 | Virtual machines | Optional Ubuntu 26.04 LTS test VM, Trusted Launch, Secure Boot, and vTPM. No VM is deployed by default; production jump-host authentication/management is outside scope. |
-| Azure Monitor / Log Analytics / Application Insights | Resource diagnostics remain typed, inline extension resources. Application Insights uses secure connection-string outputs. Gateway OTLP export is supported but needs asynchronous post-deployment configuration and DCR authorization; it is not configured here. |
+| Azure Monitor / Log Analytics / Application Insights | Resource diagnostics remain typed, inline extension resources. Application Insights uses secure connection-string outputs. Gateway OTLP export needs asynchronous DCR authorization, so `scripts/postdeploy-gateway-telemetry.sh` configures it after the main deployment. Foundry accounts get `AppInsights` tracing connections. |
 | Azure RBAC / resource groups | Stable management versions above. Definition GUIDs and alias/resource scopes are retained; no new subscription-wide grants or policies are added. Existing operator privileges are outside the template's isolation claim. |
 
 Sources: [OpenAI v1](https://learn.microsoft.com/azure/foundry/openai/api-version-lifecycle),
@@ -175,8 +175,10 @@ exemption and the distinction between reachability and authorization.
 ```
 
 The team project → AI Gateway model connections are created by the template; this
-script only verifies them. Gateway telemetry (OpenTelemetry exporter) is a manual
-post-deploy step, and the inbound private endpoint is opt-in
+script only verifies them. `deploy.sh` also runs
+`./scripts/postdeploy-gateway-telemetry.sh` (idempotent; skip with
+`SKIP_GATEWAY_TELEMETRY=1`) to configure the gateway OpenTelemetry exporter. The inbound
+private endpoint is opt-in
 (`deployAiGatewayPrivateEndpoint`, gated feature); see `docs/implementation-gaps.md`.
 
 ## 8. Run tests
@@ -188,6 +190,8 @@ post-deploy step, and the inbound private endpoint is opt-in
 ./scripts/test-gateway-inference.sh            # Team A alias, chat + responses -> 200
 ./scripts/test-team-isolation.sh               # Team B alias -> 401/403; raw/unpublished model -> 4xx
 ./scripts/test-foundry-project-through-gateway.sh  # Team A project, <connection>/<alias> -> 200
+./scripts/test-agent-through-gateway.sh        # Team A demo agent (kept) answers via the hub model
+./scripts/test-end-to-end-trace.sh             # same trace ID in Team A + platform App Insights
 ./scripts/test-direct-central-foundry-blocked.sh   # team roles absent; operator call informational
 ```
 
