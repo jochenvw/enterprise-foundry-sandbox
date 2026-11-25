@@ -24,8 +24,8 @@ param privateEndpointsSubnetPrefix string
 @description('Team apps subnet prefix.')
 param teamAppsSubnetPrefix string
 
-@description('Delegation service for the Foundry agent subnet. Foundry standard agent injection delegates to Microsoft.app/environments.')
-param agentSubnetDelegation string = 'Microsoft.app/environments'
+@description('Delegation service for the Foundry agent subnet. Foundry standard agent injection delegates to Microsoft.App/environments.')
+param agentSubnetDelegation string = 'Microsoft.App/environments'
 
 var agentSubnetName = 'snet-foundry-agents'
 var privateEndpointsSubnetName = 'snet-private-endpoints'

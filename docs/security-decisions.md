@@ -6,20 +6,23 @@ its rationale.
 ## Central model governance
 Approved models are deployed **only** on the central Foundry account in the hub. This
 gives the platform team a single point to approve models, set capacity, and meter usage,
-and prevents teams from independently standing up ungoverned frontier models.
+and centralizes the deployments created by this template. No Azure Policy is deployed
+to prevent privileged operators from creating other models outside it.
 
 ## Teams consume through the gateway
 Teams call their Azure AI Gateway alias, never the central model endpoint directly. The
 gateway is where token limits and (optionally) content safety are enforced consistently.
-Azure AI Gateway is in public preview with no SLA.
+Azure AI Gateway is GA; its networking and Foundry model connections remain preview.
 
 ## Managed identity preferred over keys
 The AI Gateway authenticates to the central Foundry using its **system-assigned managed
 identity** (model provider with managed-identity auth). Callers and team projects
-authenticate to the gateway with Entra ID. No API keys are created, embedded in Bicep,
+authenticate to the gateway with Entra ID. No runtime API keys are distributed, embedded in Bicep,
 outputs, or files; gateway API keys are gateway-wide, so they would also defeat team
-isolation. The App Insights connection string is handled as a `@secure()` parameter and is
-not emitted as an output.
+isolation. Foundry, Search, and Cosmos disable local authentication; Storage disables
+shared-key access and anonymous blobs. Cosmos also disables key-based metadata writes.
+Application Insights connection strings use `@secure()` parameters and outputs; the
+unused instrumentation-key output has been removed.
 
 ## No gateway request logging by default
 The template configures no gateway telemetry, so prompts and responses are not logged at
@@ -27,7 +30,7 @@ the gateway. Enabling the OpenTelemetry exporter is a deliberate post-deploy ste
 what it captures before enabling it.
 
 ## Private endpoints enabled
-`deployPrivateEndpoints=true`. Storage (blob), Cosmos DB (Sql), AI Search, Key Vault, the
+The entrypoint always creates private endpoints. Storage (blob), Cosmos DB (Sql), AI Search, Key Vault, the
 Foundry accounts are reachable over private endpoints with records in private DNS zones
 linked to the hub and both spokes. The AI Gateway reaches central Foundry through hub VNet
 integration and the central private endpoint. Its inbound private endpoint is optional
@@ -45,10 +48,9 @@ Key Vault, which silently voids the allowlist; for demo environments
 `exemptDataResourcesFromNetworkPolicy` applies the policy's own opt-out tag
 (`SecurityControl=Ignore`) to those resources only. The tag exempts *all* rules in that
 initiative, so the template pins what they enforced (Storage shared key off, Cosmos
-local auth off, anonymous blob access off). Leave it `false` outside demo/dev. The other modes are
-`privateOnly` (public access Disabled, private endpoints only — the original posture) and
-`publicIpOnly` (IP allowlist without private endpoints). `publicIpOnly` blocks the
-gateway's egress to central Foundry, so it is not a working mode for gateway inference.
+local auth off, anonymous blob access off). Leave it `false` outside demo/dev. The other
+supported mode is `privateOnly` (public access disabled). An empty operator allowlist
+also disables public access rather than opening the endpoints.
 
 > **Gateway exception:** the operator-IP allowlist is applied to the **data plane** only.
 > The AI Gateway ingress is public and gated by Entra ID plus alias-scoped RBAC. Foundry
@@ -57,7 +59,8 @@ gateway's egress to central Foundry, so it is not a working mode for gateway inf
 > to the gateway's public endpoint (not verified in this sandbox).
 
 `scripts/test-demo-access.sh` runs after deployment and fails closed if team resources
-cannot be enumerated or required data resources are missing. It tests network
+cannot be enumerated, required data resources or tokens are missing, or HTTP results are
+uncertain. It tests network
 reachability, not user authorization or the portal UI. `scripts/allow-demo-access.sh`
 adds a new network's ranges to existing rules without redeployment; the next deployment
 replaces them with the current deployment's detected ranges. See
@@ -72,10 +75,19 @@ test principal is granted the Team A alias only. There are no cross-team RBAC as
 BYO data resources.
 
 ## Direct central model access not granted to teams
-Team identities receive **no** Cognitive Services role on the central account. Combined
-with private networking, teams have neither authorization nor a network path to call the
-central model directly — only the AI Gateway managed identity is granted
-**Foundry User** on the central account.
+Team identities receive **no** role on the central account. Hub/spoke peering can provide
+a network path, but does not grant authorization. Only the AI Gateway managed identity
+receives **Foundry User** there from this template. The direct-access checker inspects
+both team account and project identities, including inherited/group assignments, and
+fails if identities or role queries cannot be resolved. An operator's existing broader
+privileges are reported separately.
+
+## Optional VM and retained demo trade-offs
+The optional test VM uses Ubuntu 26.04 LTS with Trusted Launch, Secure Boot, and vTPM.
+Its password is a secure parameter, not a committed credential; it remains a disposable
+test VM, not a production administration pattern. Storage and Cosmos enforce TLS 1.2
+as the supported configurable minimum. Key Vault uses RBAC and soft delete; purge
+protection remains off for disposable demos because enabling it is irreversible.
 
 ## No firewall, CMK, PTU, or zones — by design
 These are intentionally excluded to keep the simulation focused and low-cost. See

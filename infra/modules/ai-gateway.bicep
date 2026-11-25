@@ -5,9 +5,10 @@
 // Outbound VNet integration places that traffic in the hub so it reaches central
 // Foundry through its private endpoint.
 //
-// AI Gateway is in public preview. The Bicep type index does not list
+// The service is GA; VNet integration and Private Link remain preview.
+// The Bicep type index does not list
 // 2026-11-01 yet, so BCP081 is suppressed, as it is in the official samples:
-// https://github.com/Azure/ai-gateway
+// https://github.com/Azure/aigateway
 // =============================================================================
 
 @description('Gateway name. It becomes the first label of the runtime host name (3-24 lowercase letters, digits, and hyphens).')

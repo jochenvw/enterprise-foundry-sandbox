@@ -29,9 +29,6 @@ param publicNetworkAccess string = 'Disabled'
 @description('Operator IPs/CIDRs to allowlist when public access is Enabled. Empty leaves no IP rule. Pass single hosts bare (no /32) for Storage compatibility.')
 param allowedClientIpRanges array = []
 
-@description('Deploy private endpoint for the account.')
-param deployPrivateEndpoints bool = true
-
 @description('Private endpoints subnet ID (this spoke).')
 param privateEndpointsSubnetId string
 
@@ -53,8 +50,6 @@ param aiServicesPrivateDnsZoneId string
 @description('Log Analytics workspace ID for diagnostics.')
 param logAnalyticsWorkspaceId string
 
-var hasIpRule = !empty(allowedClientIpRanges)
-var networkDefaultAction = (hasIpRule || publicNetworkAccess == 'Disabled') ? 'Deny' : 'Allow'
 var ipRules = map(allowedClientIpRanges, r => { value: r })
 
 var networkInjections = enableAgentNetworkInjection
@@ -82,9 +77,9 @@ resource account 'Microsoft.CognitiveServices/accounts@2026-09-01' = {
     allowProjectManagement: true
     customSubDomainName: accountName
     publicNetworkAccess: publicNetworkAccess
-    disableLocalAuth: false
+    disableLocalAuth: true
     networkAcls: {
-      defaultAction: networkDefaultAction
+      defaultAction: 'Deny'
       ipRules: ipRules
     }
     networkInjections: networkInjections
@@ -124,7 +119,7 @@ resource accountDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-pr
   }
 }
 
-module pe 'private-endpoint.bicep' = if (deployPrivateEndpoints) {
+module pe 'private-endpoint.bicep' = {
   name: 'pe-${teamName}-foundry'
   params: {
     location: location

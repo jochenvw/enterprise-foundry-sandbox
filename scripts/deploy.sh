@@ -16,9 +16,10 @@ echo "==> Detecting operator egress ranges for the data-plane allowlist"
 CLIENT_IP_RANGES="$(detect_client_ip_ranges | tr -d '\r')"
 if [[ "${CLIENT_IP_RANGES}" != "[]" ]]; then
   echo "    Allowlisting ${CLIENT_IP_RANGES} (mode: ${NETWORK_ACCESS_MODE})"
-else
-  echo "    WARNING: could not detect a public IP; deploying without an IP allowlist." >&2
-  echo "    Set ALLOWED_CLIENT_IPS=<ip-or-cidr,...> to allowlist manually." >&2
+elif [[ "${NETWORK_ACCESS_MODE}" != "privateOnly" ]]; then
+  echo "ERROR: No public egress range detected; refusing a hybrid deployment without demo access." >&2
+  echo "       Set ALLOWED_CLIENT_IPS=<ip-or-cidr,...> or use NETWORK_ACCESS_MODE=privateOnly." >&2
+  exit 1
 fi
 # Arrays go through a parameters file: inline JSON does not survive az.cmd quoting on Windows.
 RANGES_PARAMS_FILE="$(mktemp)"

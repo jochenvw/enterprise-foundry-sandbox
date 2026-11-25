@@ -2,14 +2,14 @@
 
 ## Bicep build fails
 - Run `az bicep version` and `az bicep upgrade` to ensure a recent compiler.
-- Run `az bicep build --file infra/main.bicep` and read the first error; later errors are
+- Run `./scripts/validate.sh --local` and read the first error; later errors are
   often cascades of the first.
 
 ## `az deployment sub validate` fails on quota or SKU
 - AI Search Basic or Cognitive Services S0 may be quota-limited in the
   subscription/region. Request quota or change SKU/region.
 - Confirm the region is `swedencentral` (location code, not a display name) and that the
-  subscription can create `Microsoft.ApiManagement/aigateways` (public preview).
+  subscription can create `Microsoft.ApiManagement/aigateways` (GA service).
 - Bicep warns `BCP081` for the AI Gateway types; it is suppressed because API
   `2026-11-01` is not yet in the type index. ARM validates the resources at deployment.
 
@@ -42,8 +42,8 @@
 ## Gateway returns 5xx or a backend authorization/network error
 - Confirm the gateway identity holds Foundry User on the central account
   (`rbac-central.bicep`).
-- In `publicIpOnly` mode there is no central private endpoint, so central Foundry's IP
-  allowlist blocks the gateway's egress. Use `hybridPePlusIp` or `privateOnly`.
+- Both supported modes retain the central private endpoint. Confirm it is approved
+  and that the gateway resolves central Foundry to its private address.
 - Confirm `snet-aigw-integration` is delegated to `Microsoft.App/environments` and the
   central Foundry private DNS zones are linked to the hub VNet.
 
@@ -58,7 +58,9 @@
 - A direct call to central Foundry succeeding from the operator's machine is expected
   when the operator holds a data role (e.g. subscription-level Foundry User) and the
   network allows it. `./scripts/test-direct-central-foundry-blocked.sh` enforces the
-  real guarantee instead: no team account/project identity holds any role on central.
+  template's role boundary instead: no team account/project identity holds any role on
+  central, including inherited/group assignments. Missing identities or failed role
+  queries fail the check.
 - If a data-plane call (or the Foundry portal: "This Foundry account is protected by
   network access controls…") is denied even though `ipRules` contains your public IP:
   1. Azure is seeing a different source address — corporate networks NAT through several
@@ -75,6 +77,11 @@
      `ALLOWED_CLIENT_IPS` when running `scripts/allow-demo-access.sh`.
   4. A successful network probe does not imply the signed-in user has the Azure RBAC
      or data-plane permissions required by the portal. See [`demo-access.md`](demo-access.md).
+- `UNVERIFIED` demo checks indicate missing tokens or unexpected HTTP results such as
+  proxy/service `5xx` or `404`. Resolve those errors; do not add network exceptions
+  merely to hide an unverified result.
+- If deployed directly with an empty operator allowlist, public data-plane access is
+  deliberately disabled. Redeploy with an explicit range or use `privateOnly` access.
 
 ## Cross-team call unexpectedly succeeds
 - Check the caller's role assignments: AI Gateway Models User must be scoped to a single
@@ -102,5 +109,5 @@
   category `ApiManagement`.
 - The caller needs Foundry User on the team account; the project identity needs AI
   Gateway Models User on the team alias. Allow a few minutes for propagation.
-- Foundry → AI Gateway connections are an emerging capability. See
+- Foundry → AI Gateway model connections remain preview. See
   `docs/implementation-gaps.md` §1.

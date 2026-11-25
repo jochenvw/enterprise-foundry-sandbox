@@ -52,6 +52,13 @@ resource vm 'Microsoft.Compute/virtualMachines@2026-04-01' = {
     hardwareProfile: {
       vmSize: vmSize
     }
+    securityProfile: {
+      securityType: 'TrustedLaunch'
+      uefiSettings: {
+        secureBootEnabled: true
+        vTpmEnabled: true
+      }
+    }
     osProfile: {
       computerName: vmName
       adminUsername: adminUsername
@@ -60,7 +67,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2026-04-01' = {
     storageProfile: {
       imageReference: {
         publisher: 'Canonical'
-        offer: 'ubuntu-24_04-lts'
+        offer: 'ubuntu-26_04-lts'
         sku: 'server'
         version: 'latest'
       }

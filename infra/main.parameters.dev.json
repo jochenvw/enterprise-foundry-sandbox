@@ -14,9 +14,6 @@
     "deployTestVm": {
       "value": false
     },
-    "deployPrivateEndpoints": {
-      "value": true
-    },
     "networkAccessMode": {
       "value": "hybridPePlusIp"
     },

@@ -3,7 +3,8 @@
 This repository deploys an **enterprise-shaped Microsoft Foundry simulation** on Azure
 using Bicep. It models a hub/spoke topology with central model governance and team
 isolation, where teams consume approved models **only** through a central **Azure AI
-Gateway** (`Microsoft.ApiManagement/aigateways`, API `2026-11-01`, public preview, no SLA).
+Gateway** (`Microsoft.ApiManagement/aigateways`, API `2026-11-01`, GA service with preview
+networking and Foundry model connections).
 
 ## Diagram
 
@@ -75,6 +76,12 @@ all AAD-auth — together with a project **capability host**. The project manage
 granted the data-plane roles plus the control-plane **Cosmos DB Operator** role the
 capability host requires (`infra/modules/foundry-team-agent.bicep`).
 
+This is the existing capability-host setup, not a deployment of the newer hosted-agent
+runtime. Current guidance favors capability settings; their migration boundary and the
+absence of a published stable schema are documented in
+[`implementation-gaps.md`](implementation-gaps.md). No agent runtime is exercised by
+the model-routing tests.
+
 ### Azure AI Gateway (hub)
 The shared AI traffic control plane (`infra/modules/ai-gateway.bicep`), named
 `aigw-<prefix>-<suffix>-<unique>` (max 24 characters). It has a system-assigned managed
@@ -106,6 +113,9 @@ Foundry sends diagnostics to it. The AI Gateway has no diagnostic settings; its
 OpenTelemetry exporter is a manual post-deploy step (see `implementation-gaps.md`). Each team spoke also has its own Log Analytics Workspace + Application
 Insights, and that team's Foundry account plus BYO data resources send diagnostics to it.
 Team-built agents/apps can point at the team-local Application Insights instance.
+Diagnostics are inline extension resources with typed scopes and resource-specific
+categories. Application Insights connection strings, not standalone instrumentation
+keys, are exposed as secure outputs.
 
 ### Operator access for live demos
 In the default `hybridPePlusIp` mode, the public data-plane endpoints are deny-by-default
@@ -128,12 +138,13 @@ authorization. See [`demo-access.md`](demo-access.md).
   traffic: model providers, aliases, token-limit and content-safety policies, and
   alias-scoped Entra RBAC are declarative resources, with no policy XML, products, or
   subscription keys. It also supports outbound VNet integration and an inbound private
-  endpoint. The trade-off is preview status (no SLA) and less mature telemetry.
+  endpoint. Those networking features and Foundry model connections remain preview;
+  telemetry needs an asynchronous post-deployment integration.
 
 ## Intentional exclusions
 
 - **No PTU** — provisioned throughput is expensive and unnecessary for a simulation;
-  capacity is minimal Standard.
+  capacity is 50K TPM on `GlobalStandard`, with 20K TPM per caller identity on each team alias.
 - **No Azure Firewall / forced tunneling** — would add cost and operational weight beyond
   the goal of demonstrating Foundry interconnection and gateway governance.
 - **No customer-managed keys (CMK)** — platform-managed keys are sufficient here and avoid
@@ -145,9 +156,10 @@ authorization. See [`demo-access.md`](demo-access.md).
 - **Team ⟷ Team**: enforced by separate spokes, separate identities, separate gateway
   aliases with alias-scoped RBAC, and no cross-team RBAC. Team A cannot call Team B's alias
   and cannot read Team B's data.
-- **Team ⟷ Central model**: teams have no data-plane role on the central account and (with
-  private networking) no network path to it. The AI Gateway managed identity is the only
-  sanctioned caller.
+- **Team ⟷ Central model**: team identities have no central-account role. Peering and
+  private DNS can provide a network path, so Entra authorization enforces this boundary.
+  The AI Gateway managed identity is the sanctioned caller; existing operator privileges
+  outside this template can permit direct access.
 
 ## Data / control-plane flows
 

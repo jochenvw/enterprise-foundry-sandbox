@@ -52,4 +52,3 @@ output appInsightsId string = appInsights.id
 output appInsightsName string = appInsights.name
 @secure()
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
-output appInsightsInstrumentationKey string = appInsights.properties.InstrumentationKey

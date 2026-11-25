@@ -5,6 +5,8 @@ infra/**/*.json
 # Local environment
 *.env
 .DS_Store
+__pycache__/
+*.py[cod]
 
 # Editor
 .vscode/

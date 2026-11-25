@@ -6,10 +6,12 @@ on the routing path — gateway, model provider, per-team aliases and policies, 
 RBAC, and the team project connections — is deployed by Bicep. There are no API keys,
 policy XML files, or post-deploy portal steps.
 
-> **Preview.** Azure AI Gateway is in public preview with **no SLA**. The Bicep type index
-> does not list `2026-11-01` yet, so the modules suppress `BCP081`, as the official
-> samples do. See the [AI gateway documentation](https://learn.microsoft.com/azure/api-management/)
-> and the [Azure/ai-gateway samples](https://github.com/Azure/ai-gateway).
+> **GA service, feature-specific previews.** Azure AI Gateway became generally available
+> on November 17, 2026. Private Link, VNet integration, and Foundry prompt-agent model
+> connections remain preview. The Bicep type index does not list `2026-11-01` yet, so
+> the modules suppress `BCP081`, as official samples do. See the
+> [GA announcement](https://techcommunity.microsoft.com/blog/IntegrationsonAzureBlog/azure-ai-gateway-is-now-generally-available-ship-faster-stay-in-control/4572644),
+> [documentation](https://aka.ms/aigateway/docs), and [samples](https://github.com/Azure/aigateway).
 
 ## How it works
 
@@ -19,7 +21,7 @@ policy XML files, or post-deploy portal steps.
    `snet-aigw-integration`, so its calls to central Foundry use the central private
    endpoint and the hub's private DNS zones.
 
-2. **The gateway is the only caller of the central model.** Its identity holds
+2. **The gateway is the sanctioned team route to the central model.** Its identity holds
    **Foundry User** on the central Foundry account (`infra/modules/rbac-central.bicep`).
    Teams get no role there.
 
@@ -32,8 +34,9 @@ policy XML files, or post-deploy portal steps.
    example `team-a-enterprise-gpt5-mini`. Each alias carries:
    - a `tokenLimit` policy (tokens per minute from `teamTokenLimitsPerMinute`,
      `counterKey: identity`), and
-   - an optional `contentSafety` policy (`enableContentSafetyPolicy`, off by default
-     because the policy is still aligning with API `2026-11-01`).
+   - an optional, supported `contentSafety` policy (`enableContentSafetyPolicy`,
+     off by default), screening prompts and responses at Medium severity in all
+     four harm categories.
 
 5. **Team isolation is alias-scoped RBAC.** `infra/modules/ai-gateway-alias-role.bicep`
    grants **AI Gateway Models User** on **one alias**. Each team project's managed
@@ -112,13 +115,13 @@ flowchart LR
 
 | Parameter | Purpose | Default |
 | --- | --- | --- |
-| `teamTokenLimitsPerMinute` | Per-team TPM on each alias (aligned with `teamNames`) | `[1000, 1000]` |
+| `teamTokenLimitsPerMinute` | TPM per caller identity on each alias (aligned with `teamNames`) | `[20000, 20000]` |
 | `enableTokenLimitPolicy` | Apply the `tokenLimit` policy | `true` |
 | `enableContentSafetyPolicy` | Apply a `contentSafety` policy (Medium, all categories) | `false` |
 | `useResponsesApiUpstream` | Project connections send Responses API requests (false = Chat Completions) | `true` |
 | `deployAiGatewayPrivateEndpoint` | Inbound private endpoint + DNS zone (gated feature) | `false` |
 | `gatewayTestPrincipalId` / `gatewayTestPrincipalType` | Test identity: Models User on the first team alias + Foundry User on that team's account | `''` / `User` |
-| `networkAccessMode` | Data-plane posture (`hybridPePlusIp` \| `publicIpOnly` \| `privateOnly`) | `hybridPePlusIp` |
+| `networkAccessMode` | Data-plane posture (`hybridPePlusIp` \| `privateOnly`), always with private endpoints | `hybridPePlusIp` |
 
 ## Tests
 
@@ -130,7 +133,7 @@ flowchart LR
 | `scripts/test-gateway-inference.sh` | Team A alias, Chat Completions and Responses → `200` |
 | `scripts/test-team-isolation.sh` | Team B alias → `401`/`403`; raw deployment name / unpublished model → `4xx` |
 | `scripts/test-foundry-project-through-gateway.sh` | Team A project, `<connection>/<alias>` via Responses → `200` |
-| `scripts/test-direct-central-foundry-blocked.sh` | Direct central Foundry call → `401`/`403` or `000` |
+| `scripts/test-direct-central-foundry-blocked.sh` | Team account/project identities have no central roles, including inherited/group assignments; operator's direct v1 call is informational |
 
 `deploy.sh` passes the signed-in identity as `gatewayTestPrincipalId` (set
 `SKIP_TEST_PRINCIPAL=1` to skip). Positive checks retry on `401`/`403`
@@ -138,7 +141,8 @@ flowchart LR
 
 ## Caveats
 
-- **Preview, no SLA.** Resource shapes and policies may change.
+- **Networking and Foundry connections remain preview**, although the gateway service is GA.
+  Review feature terms and current pricing rather than assuming a blanket preview/no-SLA status.
 - **Foundry portal reachability is separate from gateway access.** The operator IP
   allowlist covers Foundry and connected data endpoints, not gateway ingress.
   `scripts/test-demo-access.sh` checks the current shell's network path; see
@@ -150,17 +154,23 @@ flowchart LR
   `Gateway` private endpoint and a zone named after the host minus its first label
   (for example `privatelink.swedencentral-01.ai.gateway.azure.com`), linked to the hub
   and both spokes.
-- **Telemetry is manual.** The AI Gateway OpenTelemetry exporter
+- **Telemetry requires asynchronous post-deployment integration.** The AI Gateway OpenTelemetry exporter
   (`workspaces/telemetryExporters`) needs Application Insights OTLP ingestion and
   Monitoring Metrics Publisher on a managed data collection rule, so it is a post-deploy
   step. There are no gateway diagnostic settings or token metrics in Log Analytics.
 - **Token limits are per caller identity per alias.** Every identity that calls a team
   alias gets that team's full budget; with one project identity per team this equals a
   per-team budget.
-- **`publicIpOnly` breaks gateway egress.** That mode has no central private endpoint,
-  so the gateway (egressing from its VNet integration) is blocked by central Foundry's IP
-  allowlist. Use `hybridPePlusIp` or `privateOnly`.
 - **Agent runtimes in spokes** need outbound access to the gateway's public endpoint
   (not verified in this sandbox).
-- **Foundry → AI Gateway connections** are an emerging capability; the connection
+- **Foundry → AI Gateway connections** remain preview; the connection
   metadata mirrors what the portal creates today.
+
+## Other available capabilities
+
+The GA service also supports model routing/failover, request and cost limits, MCP
+federation, on-behalf-of tool identity, and OTLP export. This repository deploys model
+aliases, managed-identity routing, token limits, and optional content safety; it does not
+claim those other capabilities are configured or tested. Model Router and some Agent365
+protections remain preview. Billing starts January 1, 2027; review the announced free
+request allowance, paid tiers, and monthly service fee before increasing demo usage.

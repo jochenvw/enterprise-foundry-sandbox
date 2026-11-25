@@ -31,25 +31,17 @@ param deployTestVm bool = false
 @secure()
 param testVmAdminPassword string = ''
 
-@description('Deploy private endpoints for supported resources. Derived from networkAccessMode; override only for special cases.')
-param deployPrivateEndpoints bool = networkAccessMode != 'publicIpOnly'
-
 @description('''Network access posture for data-plane resources (Foundry accounts, Storage, Cosmos, Search, Key Vault):
 - hybridPePlusIp: private endpoints PLUS an operator-IP allowlist on public access (reachable out-of-the-box). Default.
-- publicIpOnly:   public access restricted to the operator IP allowlist; no private endpoints.
 - privateOnly:    private endpoints only, public access disabled (access via VPN/jumpbox/test VM).''')
 @allowed([
   'hybridPePlusIp'
-  'publicIpOnly'
   'privateOnly'
 ])
 param networkAccessMode string = 'hybridPePlusIp'
 
 @description('Operator public IPs or CIDRs to allowlist on public access (e.g. ["203.0.113.0/24"]). Corporate networks often egress through several NAT addresses, so the deploy script detects all of them and passes their /24 ranges. Ignored for privateOnly.')
 param allowedClientIpRanges array = []
-
-@description('Legacy single operator IP/CIDR; merged into allowedClientIpRanges.')
-param allowedClientIp string = ''
 
 @description('Tag Storage, Cosmos DB and Key Vault with the governance opt-out tag so tenant "modify" policies do not force publicNetworkAccess=Disabled, keeping the operator IP allowlist effective (needed for live portal demos). Local auth stays disabled in the template regardless.')
 param exemptDataResourcesFromNetworkPolicy bool = false
@@ -105,7 +97,7 @@ param teamAVnetAddressPrefix string = '10.20.0.0/16'
 @description('Team B spoke VNet address space.')
 param teamBVnetAddressPrefix string = '10.30.0.0/16'
 
-@description('Apply a contentSafety policy on each team alias. Off by default: the AI Gateway content safety policy is still aligning with API 2026-11-01.')
+@description('Optionally screen prompts and responses on each team alias with the supported contentSafety policy at Medium severity.')
 param enableContentSafetyPolicy bool = false
 
 @description('Per-team tokens-per-minute (TPM) limits applied on each team alias (counted per caller identity), aligned by index with teamNames.')
@@ -163,14 +155,13 @@ var nameSuffix = '${regionToken}-${environmentName}'
 // -----------------------------------------------------------------------------
 
 // Public network access string applied to data-plane resources.
-var publicNetworkAccess = networkAccessMode == 'privateOnly' ? 'Disabled' : 'Enabled'
+var publicNetworkAccess = networkAccessMode == 'privateOnly' || empty(allowedClientIpRanges) ? 'Disabled' : 'Enabled'
 
 // Operator IP allowlist is only meaningful when public access is enabled.
 // Storage rejects /32 (and /31) prefixes, so single hosts are passed bare.
-var requestedClientIpRanges = union(allowedClientIpRanges, empty(allowedClientIp) ? [] : [allowedClientIp])
 var effectiveAllowedClientIpRanges = networkAccessMode == 'privateOnly'
   ? []
-  : map(requestedClientIpRanges, r => endsWith(r, '/32') ? substring(r, 0, length(r) - 3) : r)
+  : map(allowedClientIpRanges, r => endsWith(r, '/32') ? substring(r, 0, length(r) - 3) : r)
 
 var dataResourceTags = exemptDataResourcesFromNetworkPolicy ? union(tags, networkPolicyExemptionTag) : tags
 
@@ -405,7 +396,6 @@ module teamAData 'modules/foundry-team-data.bicep' = {
     teamName: teamNames[0]
     uniqueSuffix: uniqueSuffix
     nameSuffix: nameSuffix
-    deployPrivateEndpoints: deployPrivateEndpoints
     publicNetworkAccess: publicNetworkAccess
     allowedClientIpRanges: effectiveAllowedClientIpRanges
     searchSkuName: searchSkuName
@@ -427,7 +417,6 @@ module teamBData 'modules/foundry-team-data.bicep' = {
     teamName: teamNames[1]
     uniqueSuffix: uniqueSuffix
     nameSuffix: nameSuffix
-    deployPrivateEndpoints: deployPrivateEndpoints
     publicNetworkAccess: publicNetworkAccess
     allowedClientIpRanges: effectiveAllowedClientIpRanges
     searchSkuName: searchSkuName
@@ -454,7 +443,6 @@ module foundryCentral 'modules/foundry-central.bicep' = {
     projectName: 'proj-central'
     publicNetworkAccess: publicNetworkAccess
     allowedClientIpRanges: effectiveAllowedClientIpRanges
-    deployPrivateEndpoints: deployPrivateEndpoints
     privateEndpointsSubnetId: networkHub.outputs.privateEndpointsSubnetId
     cognitivePrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxCognitive]
     openAiPrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxOpenAi]
@@ -481,7 +469,6 @@ module foundryTeamA 'modules/foundry-team.bicep' = {
     publicNetworkAccess: publicNetworkAccess
     allowedClientIpRanges: effectiveAllowedClientIpRanges
     enableAgentNetworkInjection: enableAgentNetworkInjection
-    deployPrivateEndpoints: deployPrivateEndpoints
     privateEndpointsSubnetId: networkTeamA.outputs.privateEndpointsSubnetId
     agentSubnetId: networkTeamA.outputs.agentSubnetId
     cognitivePrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxCognitive]
@@ -503,7 +490,6 @@ module foundryTeamB 'modules/foundry-team.bicep' = {
     publicNetworkAccess: publicNetworkAccess
     allowedClientIpRanges: effectiveAllowedClientIpRanges
     enableAgentNetworkInjection: enableAgentNetworkInjection
-    deployPrivateEndpoints: deployPrivateEndpoints
     privateEndpointsSubnetId: networkTeamB.outputs.privateEndpointsSubnetId
     agentSubnetId: networkTeamB.outputs.agentSubnetId
     cognitivePrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxCognitive]

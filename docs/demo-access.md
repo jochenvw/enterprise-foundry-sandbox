@@ -18,7 +18,9 @@ prove that a specific portal operation will succeed.
 each Foundry endpoint and enumerates each team's connected data resources before
 probing them. It fails if it cannot enumerate resources, if an always-deployed
 Storage, Cosmos DB, or AI Search resource is missing, or if an endpoint returns a
-network-denial response. An authorization `401`/`403` without a network-denial
+network-denial response. Token acquisition failures and uncertain HTTP results,
+including proxy/upstream `5xx` or unexpected `404`, fail as `UNVERIFIED` rather than
+being mistaken for reachability. An authorization `401`/`403` without a network-denial
 message means the request reached the service; it does not mean the signed-in user
 has permission to browse its data.
 
@@ -71,9 +73,12 @@ disabled as compensating controls. Review the tenant policy and security require
 before enabling the exemption outside an isolated demo or development environment.
 
 `allow-demo-access.sh` changes IP rules only. It cannot reverse a policy-forced
-`publicNetworkAccess=Disabled` state. If Storage, Cosmos DB, or Key Vault still reports
+`publicNetworkAccess=Disabled` state, or the template's fail-closed public-access setting
+when it was deployed with an empty allowlist. If Storage, Cosmos DB, or Key Vault still reports
 a network denial, verify the resource tag and effective public-network setting, then
 redeploy with `exemptDataResourcesFromNetworkPolicy=true` only where policy permits.
+Supply an operator range on that deployment; public access is never opened merely
+because the allowlist is empty.
 
 ## Limits of the check
 

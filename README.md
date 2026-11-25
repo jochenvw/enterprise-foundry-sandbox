@@ -8,7 +8,7 @@
 A production-shaped, hub/spoke Azure simulation of an enterprise Microsoft Foundry
 topology: one **central Foundry** owning approved model deployments, two **team
 Foundries** (Team A / Team B) in isolated spokes with BYO data, and a central **Azure AI
-Gateway** (`Microsoft.ApiManagement/aigateways`, public preview) that teams must use to
+Gateway** (`Microsoft.ApiManagement/aigateways`, generally available) that teams must use to
 consume models. Region: **Sweden Central**.
 
 The development environment is designed to support live demos: it keeps private
@@ -61,12 +61,12 @@ az login
 (`SKIP_TEST_PRINCIPAL=1` to skip). It detects all of this network's egress addresses
 (corporate NAT pools use several) and allowlists their /24 ranges; override with
 `ALLOWED_CLIENT_IPS` / `EXTRA_CLIENT_IP_RANGES` / `CLIENT_IP_PREFIX`. Choose a different
-posture with `NETWORK_ACCESS_MODE` (`hybridPePlusIp` | `privateOnly`; `publicIpOnly`
-blocks the gateway's egress to central Foundry).
+posture with `NETWORK_ACCESS_MODE` (`hybridPePlusIp` | `privateOnly`). Both retain
+the private endpoints needed for gateway-to-central inference.
 
 **Live demos:** every deploy runs `scripts/test-demo-access.sh` by default. It checks
 that the current shell can reach all Foundry accounts and connected data resources,
-and fails closed if resource enumeration fails. From a new network, run
+and fails closed on enumeration, token, or uncertain HTTP results. From a new network, run
 `scripts/allow-demo-access.sh` to add its ranges in place and verify them, without
 redeploying. This check is for network reachability, not portal sign-in or resource
 permissions. See [`docs/demo-access.md`](docs/demo-access.md).
@@ -77,8 +77,8 @@ See [`docs/deployment.md`](docs/deployment.md) for details,
 
 ## Current API baseline
 
-Azure APIs are aligned with published stable schemas as of **2026-11-25** (except the
-preview AI Gateway API `2026-11-01`), using
+Azure APIs are aligned with published stable schemas as of **2026-11-25**. The GA
+AI Gateway API `2026-11-01` is retained from official samples despite missing Bicep types, using
 Azure CLI **2.93.0** and Bicep **0.49.2**. There are no third-party package dependencies;
 Python checks use only the standard library. See the version table and local checks
 in [`docs/deployment.md`](docs/deployment.md).
@@ -86,18 +86,21 @@ in [`docs/deployment.md`](docs/deployment.md).
 Applications call `POST https://<gateway-host>/default/models/openai/v1/chat/completions`
 (or `/responses`) with an Entra token for `https://ai.gateway.azure.com` and the team
 alias in the JSON `model` field, e.g. `team-a-enterprise-gpt5-mini`. Team Foundry
-projects use the model `<connection>/<alias>`. Azure AI Gateway is in **public preview
-with no SLA** (API `2026-11-01`).
+projects use the model `<connection>/<alias>`. Azure AI Gateway became **GA on
+November 17, 2026**; its VNet integration, Private Link, and Foundry prompt-agent
+model connections remain preview.
 
 ## Key design points
 
-- Teams call **their gateway alias only**; they have no role on the central account and
-  (with private networking) no path to the central model directly.
+- Teams call **their gateway alias only**; their identities have no role on the central
+  account. Peering can provide a network path, so authorization—not absence of a
+  route—is the central access boundary.
 - Each team project identity holds **AI Gateway Models User on its own alias only**, so
   Team A cannot call Team B's alias.
 - The gateway authenticates to the central Foundry with its **managed identity**
   (Foundry User) over hub VNet integration and the central private endpoint. No API keys
-  are created anywhere; callers use Entra ID.
+  are distributed or used; callers use Entra ID. Foundry, Search, and Cosmos local
+  authentication and Storage shared-key access are disabled.
 - The operator-IP allowlist applies to the **data plane** (Foundry, Storage, Cosmos,
   Search, Key Vault) only. Gateway ingress is public and Entra-ID gated; an inbound
   private endpoint is optional and needs a gated subscription feature.
@@ -110,20 +113,22 @@ with no SLA** (API `2026-11-01`).
 ## Intentional gaps
 
 A few items are not automated today: gateway telemetry export, the gated inbound private
-endpoint, and content safety while the policy aligns with the preview API. Each is
+endpoint, and migration to Foundry's newer capability-settings setup. Each is
 documented in [`docs/implementation-gaps.md`](docs/implementation-gaps.md). The team
 project → gateway model connections are created by the template itself
-(`infra/modules/foundry-model-connection.bicep`).
+(`infra/modules/foundry-model-connection.bicep`). Content safety is supported and
+templated, but opt-in.
 
 ## Canonical source & acceleration
 
-This sandbox is loosely modelled on, and best understood alongside, the official Microsoft
-sample it draws from:
+This sandbox began with private-network ideas from `microsoft-foundry/foundry-samples`.
+Use current service guidance and gateway samples for the API/capability baseline:
 
-- **Canonical Bicep sample** — [Private network + Standard agent setup (`16-...`)](https://github.com/microsoft-foundry/foundry-samples/tree/main/infrastructure/infrastructure-setup-bicep/16-private-network-standard-agent-apim-setup)
-  in `microsoft-foundry/foundry-samples` (its gateway layer used API Management; this repo
-  uses Azure AI Gateway instead). Treat that as the authoritative reference; this repo is an experiment on top of those ideas.
-- **Azure AI Gateway** — [documentation](https://learn.microsoft.com/azure/api-management/)
-  and [samples](https://github.com/Azure/ai-gateway).
+- **Microsoft Foundry** — [private networking](https://learn.microsoft.com/azure/foundry/how-to/configure-private-link)
+  and [current standard-agent setup](https://learn.microsoft.com/azure/foundry/agents/concepts/standard-agent-setup).
+  The capability-settings migration boundary is documented in this repo's implementation gaps.
+- **Azure AI Gateway** — [documentation](https://aka.ms/aigateway/docs),
+  [samples](https://github.com/Azure/aigateway), and
+  [GA announcement](https://techcommunity.microsoft.com/blog/IntegrationsonAzureBlog/azure-ai-gateway-is-now-generally-available-ship-faster-stay-in-control/4572644).
 - **GitHub Copilot for Azure skills** — the [plugin skills](https://github.com/microsoft/GitHub-Copilot-for-Azure/tree/main/plugin)
   can accelerate work like this (Foundry provisioning, private networking, model deployment, RBAC). Much of this sandbox was built with their help.

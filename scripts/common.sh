@@ -6,7 +6,10 @@ set -euo pipefail
 export DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-enterprise-foundry}"
 export LOCATION="${LOCATION:-swedencentral}"
 export FOUNDRY_API_VERSION="${FOUNDRY_API_VERSION:-2026-09-01}"
-export INFERENCE_API_VERSION="${INFERENCE_API_VERSION:-2024-10-21}"
+export SEARCH_DATA_API_VERSION="${SEARCH_DATA_API_VERSION:-2026-04-01}"
+export STORAGE_DATA_API_VERSION="${STORAGE_DATA_API_VERSION:-2026-10-06}"
+export KEY_VAULT_DATA_API_VERSION="${KEY_VAULT_DATA_API_VERSION:-2026-04-01}"
+export COSMOS_DATA_API_VERSION="${COSMOS_DATA_API_VERSION:-2018-12-31}"
 # Entra token audiences: AI Gateway runtime and Foundry project data plane.
 export AI_GATEWAY_RESOURCE="${AI_GATEWAY_RESOURCE:-https://ai.gateway.azure.com}"
 export FOUNDRY_DATA_RESOURCE="${FOUNDRY_DATA_RESOURCE:-https://ai.azure.com}"
@@ -23,14 +26,18 @@ export PARAMETERS_FILE="${REPO_ROOT}/infra/main.parameters.dev.json"
 
 # Network access mode passed to the template. hybridPePlusIp keeps private
 # endpoints AND allowlists the operator's public IP so the environment is usable
-# out-of-the-box. Override with NETWORK_ACCESS_MODE (hybridPePlusIp|publicIpOnly|privateOnly).
+# out-of-the-box. Override with NETWORK_ACCESS_MODE (hybridPePlusIp|privateOnly).
 export NETWORK_ACCESS_MODE="${NETWORK_ACCESS_MODE:-hybridPePlusIp}"
+case "${NETWORK_ACCESS_MODE}" in
+  hybridPePlusIp|privateOnly) ;;
+  *) echo "ERROR: NETWORK_ACCESS_MODE must be hybridPePlusIp or privateOnly." >&2; exit 1 ;;
+esac
 
 # Detect the operator's public egress for the data-plane allowlist and print it
 # as a JSON array of CIDRs. Corporate networks NAT through several addresses
 # (and Azure front ends may see different ones), so several echo services are
 # queried and each address is widened to its /CLIENT_IP_PREFIX (default 24).
-#   ALLOWED_CLIENT_IPS / ALLOWED_CLIENT_IP  replace detection (comma/space list)
+#   ALLOWED_CLIENT_IPS                     replace detection (comma/space list)
 #   EXTRA_CLIENT_IP_RANGES                  added to detected ranges
 #   CLIENT_IP_PREFIX                        widening prefix (32 = exact hosts)
 export CLIENT_IP_PREFIX="${CLIENT_IP_PREFIX:-24}"
@@ -43,8 +50,12 @@ CLIENT_IP_ECHO_URLS=(
 
 detect_client_ip_ranges() {
   local entries=() url ip i
-  if [[ -n "${ALLOWED_CLIENT_IPS:-}${ALLOWED_CLIENT_IP:-}" ]]; then
-    entries+=("${ALLOWED_CLIENT_IPS:-}" "${ALLOWED_CLIENT_IP:-}")
+  if [[ "${NETWORK_ACCESS_MODE}" == "privateOnly" ]]; then
+    echo '[]'
+    return
+  fi
+  if [[ -n "${ALLOWED_CLIENT_IPS:-}" ]]; then
+    entries+=("${ALLOWED_CLIENT_IPS}")
   else
     for url in "${CLIENT_IP_ECHO_URLS[@]}"; do
       # Repeat each probe: some NAT pools rotate addresses between connections.
@@ -82,6 +93,7 @@ access_token() {
 # echoes the HTTP status (000 on connection failure).
 post_json() {
   local url="$1" token="$2" payload="$3"
+  : > "${RESPONSE_FILE}"
   curl -sS --max-time 120 -o "${RESPONSE_FILE}" -w '%{http_code}' \
     -H "Authorization: Bearer ${token}" \
     -H 'Content-Type: application/json' \

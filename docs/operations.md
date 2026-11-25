@@ -58,12 +58,13 @@ Access is Azure RBAC, not keys. Assign **AI Gateway Models User**
 
 ```bash
 ALIAS_ID="$(az deployment sub show -n enterprise-foundry --query properties.outputs.aiGatewayId.value -o tsv)/workspaces/default/aliases/team-a-enterprise-gpt5-mini"
-az role assignment create --assignee <object-id> \
+MSYS_NO_PATHCONV=1 az role assignment create --assignee-object-id <object-id> \
   --role a6b68e3d-a1f0-4c60-8678-237c050cf4ea --scope "${ALIAS_ID}"
 ```
 
 Never assign the role at gateway or workspace scope; that would cross team boundaries.
-Role changes can take a few minutes to apply.
+Role changes can take a few minutes to apply. The environment prefix prevents Git Bash
+from converting the ARM scope to a local Windows path; it is harmless on other Bash hosts.
 
 ## Inspect logs and usage
 
@@ -71,7 +72,7 @@ Role changes can take a few minutes to apply.
   OpenTelemetry exporter (`workspaces/telemetryExporters`) after deployment; it needs
   Application Insights OTLP ingestion and **Monitoring Metrics Publisher** on a managed
   data collection rule. See the
-  [AI gateway documentation](https://learn.microsoft.com/azure/api-management/).
+  [official enterprise telemetry workflow](https://github.com/Azure/aigateway/tree/main/labs/21-enterprise-reference).
 - **Central Log Analytics**: diagnostic settings from the central Foundry account,
   but gateway-identity call visibility and request-level correlation have not been
   confirmed.
@@ -93,3 +94,8 @@ Role changes can take a few minutes to apply.
 Each team has its own alias, so per-alias token usage is the per-team attribution signal.
 It requires the gateway's OpenTelemetry exporter. Without it, central Foundry metrics
 show only the total for the shared deployment.
+
+Gateway billing starts January 1, 2027. Review the current request allowance, paid tiers,
+and service fee in the
+[GA announcement](https://techcommunity.microsoft.com/blog/IntegrationsonAzureBlog/azure-ai-gateway-is-now-generally-available-ship-faster-stay-in-control/4572644);
+do not assume the former preview pricing persists.

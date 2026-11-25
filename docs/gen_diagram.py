@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 E = []
 
@@ -46,7 +47,7 @@ TEAL_S,TEAL_B="#0c8599","#99e9f2"      # data
 
 # ---- Title ----
 text(40,20,1600,"Enterprise Microsoft Foundry — Component-Level Solution Diagram (Sweden Central)",26,h=44,bold=False)
-text(40,62,1600,"Hub/spoke topology · private networking · central governed model via Azure AI Gateway (preview)",15,h=24)
+text(40,62,1600,"Hub/spoke topology · central model via Azure AI Gateway (GA) · networking / Foundry connections preview",15,h=24)
 
 # ---- Personas (top) ----
 pa=ellipse(250,110,300,70,GREEN_S,GREEN_B); text(260,128,280,"Team A users\n(build agents & apps)",13,align="center")
@@ -61,7 +62,7 @@ text(ax+16,262,aw-30,"RG  rg-ai-team-a-swc-dev   (spoke)",15,bold=True)
 # VNet A
 rect(ax+30,308,aw-60,300,GRAY_S,"transparent",sw=2)
 text(ax+44,318,aw-90,"VNet  vnet-ai-team-a · 10.20.0.0/16",13,bold=True)
-rect(ax+50,352,aw-100,66,GRAY_S,"#FFFFFF",fill="solid"); text(ax+62,360,aw-120,"snet-foundry-agents · 10.20.1.0/24\ndelegated Microsoft.app/environments",11)
+rect(ax+50,352,aw-100,66,GRAY_S,"#FFFFFF",fill="solid"); text(ax+62,360,aw-120,"snet-foundry-agents · 10.20.1.0/24\ndelegated Microsoft.App/environments",11)
 rect(ax+50,426,aw-100,58,GRAY_S,"#FFFFFF"); text(ax+62,438,aw-120,"snet-private-endpoints · 10.20.2.0/24",11)
 rect(ax+50,492,aw-100,58,GRAY_S,"#FFFFFF"); text(ax+62,504,aw-120,"snet-team-apps · 10.20.3.0/24",11)
 
@@ -94,7 +95,7 @@ rect(hx+50,492,hw-100,58,GRAY_S,"#FFFFFF"); text(hx+62,504,hw-120,"snet-shared-s
 
 # AI Gateway
 aigw=rect(hx+30,628,hw-60,108,ORNG_S,ORNG_B)
-text(hx+44,638,hw-90,"Azure AI Gateway  aigw-ai-swc-dev-*  (preview)\nPer-team aliases + alias-scoped Entra RBAC · tokenLimit · MSI routing\nOutbound → aigw integration subnet · Inbound: public (optional PE)",12)
+text(hx+44,638,hw-90,"Azure AI Gateway  aigw-ai-swc-dev-*  (GA)\nPer-team aliases + alias-scoped Entra RBAC · tokenLimit · MSI routing\nOutbound → integration subnet (preview) · Inbound: public (optional preview PE)",12)
 
 # Central Foundry
 cf=rect(hx+30,752,hw-60,116,BLUE_S,BLUE_B)
@@ -106,7 +107,7 @@ text(hx+44,894,hw-90,"Private DNS zones (7): cognitiveservices · openai · serv
 
 # Governance note
 rect(hx+30,996,hw-60,144,BLUE_S,"#EAF3FC")
-text(hx+44,1008,hw-90,"Central cloud team access (what they own):\n• Govern the hub: approve & host the model centrally\n• Own the AI Gateway, aliases, policies & alias RBAC\n• NO access to team spokes or team BYO data",11)
+text(hx+44,1008,hw-90,"Central cloud team access (what they own):\n• Govern the hub: approve & host the model centrally\n• Own the AI Gateway, aliases, policies & alias RBAC\n• No team data roles granted by this template",11)
 
 # ================= TEAM B RG (right) =================
 bx=1720; bw=740
@@ -115,7 +116,7 @@ text(bx+16,262,bw-30,"RG  rg-ai-team-b-swc-dev   (spoke)",15,bold=True)
 
 rect(bx+30,308,bw-60,300,GRAY_S,"transparent",sw=2)
 text(bx+44,318,bw-90,"VNet  vnet-ai-team-b · 10.30.0.0/16",13,bold=True)
-rect(bx+50,352,bw-100,66,GRAY_S,"#FFFFFF"); text(bx+62,360,bw-120,"snet-foundry-agents · 10.30.1.0/24\ndelegated Microsoft.app/environments",11)
+rect(bx+50,352,bw-100,66,GRAY_S,"#FFFFFF"); text(bx+62,360,bw-120,"snet-foundry-agents · 10.30.1.0/24\ndelegated Microsoft.App/environments",11)
 rect(bx+50,426,bw-100,58,GRAY_S,"#FFFFFF"); text(bx+62,438,bw-120,"snet-private-endpoints · 10.30.2.0/24",11)
 rect(bx+50,492,bw-100,58,GRAY_S,"#FFFFFF"); text(bx+62,504,bw-120,"snet-team-apps · 10.30.3.0/24",11)
 
@@ -166,11 +167,11 @@ arrow(1250,180,hx+hw//2,628,BLUE_S,sw=2)         # central team -> gateway/hub
 arrow(2100,180,bx+bw//2,628,PURP_S,sw=2)         # team B users -> foundry B
 
 # Direct-access-blocked annotation
-rect(hx+30,1180,hw-60,70,RED_S,RED_B)
-text(hx+44,1190,hw-90,"Isolation enforced: teams CANNOT call the central model endpoint directly\n(no role on central Foundry → 401/403; only the AI Gateway MSI is granted Foundry User).",11)
+rect(hx+30,1340,hw-60,80,RED_S,RED_B)
+text(hx+44,1350,hw-90,"Central access boundary: team identities have no central role (routes may exist)\nOnly gateway MSI gets Foundry User here; operator privileges remain separate.",11,h=60)
 
 out={"type":"excalidraw","version":2,"source":"copilot",
      "elements":E,"appState":{"viewBackgroundColor":"#ffffff","gridSize":None}}
-with open(r"C:\_CODE\enterprise-foundry\docs\solution-diagram.excalidraw","w",encoding="utf-8") as f:
+with Path(__file__).with_name("solution-diagram.excalidraw").open("w",encoding="utf-8") as f:
     json.dump(out,f,indent=2)
 print("elements:",len(E))

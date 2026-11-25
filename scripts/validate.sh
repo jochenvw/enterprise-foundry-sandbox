@@ -9,7 +9,7 @@ echo "==> az bicep version"
 az bicep version
 
 echo "==> az bicep build"
-az bicep build --file "${TEMPLATE_FILE}"
+az bicep build --file "${TEMPLATE_FILE}" --stdout >/dev/null
 
 if [[ "${1:-}" == "--local" ]]; then
   echo "Local validation complete."

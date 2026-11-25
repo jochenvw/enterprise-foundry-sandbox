@@ -5,7 +5,6 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-import xml.etree.ElementTree as ET
 
 from check_model import check_model
 from client_ip_ranges import normalize
@@ -70,6 +69,11 @@ class GatewayScriptTests(unittest.TestCase):
         az = self.bin / "az"
         az.write_text("""#!/usr/bin/env bash
 set -euo pipefail
+if [[ "$*" == *get-access-token* ]]; then
+  [[ "${MOCK_FAILURE:-}" == token ]] && { echo 'ERROR: token unavailable' >&2; exit 1; }
+  [[ "${MOCK_FAILURE:-}" == partial-token ]] && { echo partial-token; exit 1; }
+  [[ "${MOCK_FAILURE:-}" == empty-token ]] && exit 0
+fi
 case "$*" in
   *get-access-token*https://ai.gateway.azure.com*) echo gateway-token ;;
   *get-access-token*https://ai.azure.com*) echo foundry-token ;;
@@ -95,9 +99,21 @@ case "$*" in
     printf 'st%s\\tMicrosoft.Storage/storageAccounts\\n' "${suffix}"
     printf 'cosmos-%s\\tMicrosoft.DocumentDB/databaseAccounts\\n' "${suffix}"
     [[ "${MOCK_FAILURE:-}" == missing ]] || printf 'srch-%s\\tMicrosoft.Search/searchServices\\n' "${suffix}"
+    printf 'kv-%s\\tMicrosoft.KeyVault/vaults\\n' "${suffix}"
     ;;
-  *role\\ assignment\\ list*) [[ "${MOCK_FAILURE:-}" == direct ]] && echo 'Cognitive Services User' || true ;;
-  *rest\\ --method\\ get*) echo project-principal ;;
+  *role\\ assignment\\ list*)
+    [[ "${MOCK_FAILURE:-}" == roles ]] && { echo 'ERROR: AuthorizationFailed' >&2; exit 1; }
+    if [[ "${MOCK_FAILURE:-}" == unnamed-role ]]; then
+      [[ "$*" == *'[].id'* ]] && echo /subscriptions/test/providers/Microsoft.Authorization/roleAssignments/assigned
+      exit 0
+    fi
+    [[ "${MOCK_FAILURE:-}" == direct ]] && echo 'Cognitive Services User' || true
+    ;;
+  *rest\\ --method\\ get*)
+    [[ "${MOCK_FAILURE:-}" == missing-project-identity ]] || echo project-principal ;;
+  *cognitiveservices\\ account\\ show*--query\\ identity.principalId*)
+    [[ "${MOCK_FAILURE:-}" == missing-account-identity ]] || echo account-principal ;;
+  *cognitiveservices\\ account\\ show*--query\\ id*) echo /subscriptions/test/resourceGroups/rg/providers/Microsoft.CognitiveServices/accounts/acct ;;
   *account\\ show*) echo '{}' ;;
   *) exit 1 ;;
 esac
@@ -117,6 +133,12 @@ if [[ "$request" == *.services.ai.azure.com/api/projects/proj/connections* ]]; t
   fi
 elif [[ "$request" != *Authorization* ]]; then
   code=401; fail health && code=200
+elif [[ "$request" == *.blob.core.windows.net* || "$request" == *.documents.azure.com* ||
+        "$request" == *.search.windows.net* || "$request" == *.vault.azure.net* ||
+        "$request" == *.openai.azure.com/openai/v1/models* ]]; then
+  code=200
+  if fail upstream; then code=502; printf '%s' 'Bad Gateway' > "$out"; fi
+  fail not-found && code=404
 elif [[ "$request" == *central.openai.azure.com* ]]; then
   code=200
 elif [[ "$request" == *proj-a.example/api/projects/a/openai/v1/responses* && "$request" == *conn/team-a-model* ]]; then
@@ -136,7 +158,7 @@ printf '%s' "$code"
         az.chmod(0o755)
         curl.chmod(0o755)
 
-    def run_script(self, failure=""):
+    def run_script(self, failure="", script="test-model-through-gateway.sh", attempts=1):
         calls = self.bin / "calls.txt"
         environment = {
             **os.environ,
@@ -145,9 +167,13 @@ printf '%s' "$code"
             "MOCK_FAILURE": failure,
             "RETRY_ATTEMPTS": "2",
             "RETRY_DELAY": "0",
-            "SCRIPT_NAME": "test-model-through-gateway.sh",
+            "DEMO_ACCESS_ATTEMPTS": str(attempts),
+            "DEMO_ACCESS_DELAY": "0",
+            "SCRIPT_NAME": script,
         }
-        for name in ("AI_GATEWAY_RESOURCE", "FOUNDRY_DATA_RESOURCE"):
+        for name in ("AI_GATEWAY_RESOURCE", "FOUNDRY_DATA_RESOURCE", "NETWORK_ACCESS_MODE",
+                     "SEARCH_DATA_API_VERSION", "STORAGE_DATA_API_VERSION",
+                     "KEY_VAULT_DATA_API_VERSION", "COSMOS_DATA_API_VERSION"):
             environment.pop(name, None)
         if os.name == "nt":
             command = (
@@ -180,8 +206,15 @@ printf '%s' "$code"
             if "/openai/v1/" in call:
                 self.assertNotIn("api-version=", call)
         for endpoint in ("stteam-a.blob.core.windows.net", "cosmos-team-b.documents.azure.com",
-                         "srch-team-a.search.windows.net", "srch-team-b.search.windows.net"):
+                         "srch-team-a.search.windows.net", "srch-team-b.search.windows.net",
+                         "kv-team-a.vault.azure.net"):
             self.assertIn(endpoint, calls)
+        self.assertIn("central.openai.azure.com/openai/v1/models", calls)
+        self.assertIn("x-ms-version: 2026-10-06", calls)
+        self.assertIn("x-ms-version: 2018-12-31", calls)
+        self.assertIn("indexes?api-version=2026-04-01", calls)
+        self.assertIn("secrets?api-version=2026-04-01", calls)
+        self.assertIn('"model":"deployed-model"', calls)
 
     def test_role_propagation_is_retried(self):
         result, calls = self.run_script("propagation")
@@ -195,6 +228,37 @@ printf '%s' "$code"
                 self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertIn(message, result.stderr)
                 self.assertNotIn("PASS: all Foundry", result.stdout)
+
+    def test_demo_access_rejects_missing_tokens_and_uncertain_http(self):
+        for failure in ("token", "empty-token", "upstream", "not-found"):
+            with self.subTest(failure=failure):
+                result, _ = self.run_script(failure, "test-demo-access.sh")
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn("UNVERIFIED", result.stdout + result.stderr)
+                self.assertNotIn("PASS: all Foundry", result.stdout)
+
+    def test_direct_access_audit_requires_roles_and_both_identities(self):
+        for failure, message in (("roles", "Cannot inspect roles"),
+                                 ("missing-account-identity", "Missing Team A managed identity"),
+                                 ("missing-project-identity", "Missing Team A managed identity")):
+            with self.subTest(failure=failure):
+                result, _ = self.run_script(failure, "test-direct-central-foundry-blocked.sh")
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn(message, result.stderr)
+                self.assertNotIn("PASS: team account/project", result.stdout)
+
+    def test_demo_access_retries_do_not_reuse_failed_token_output(self):
+        result, calls = self.run_script("partial-token", "test-demo-access.sh", attempts=2)
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("UNVERIFIED", result.stderr)
+        self.assertNotIn("PASS: all Foundry", result.stdout)
+        self.assertEqual(calls, "")
+
+    def test_direct_access_audit_detects_roles_without_display_names(self):
+        result, _ = self.run_script("unnamed-role", "test-direct-central-foundry-blocked.sh")
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("role assignments /subscriptions/test/", result.stderr)
+        self.assertNotIn("PASS: team account/project", result.stdout)
 
     def test_any_failed_check_fails_suite(self):
         for failure in ("demo", "health", "inference", "isolation", "governance", "project", "direct"):

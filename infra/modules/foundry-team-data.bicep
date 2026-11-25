@@ -1,6 +1,6 @@
 // =============================================================================
 // Team BYO data resources: Storage, Cosmos DB (serverless SQL), AI Search,
-// Key Vault. Private endpoints + diagnostics. Public access disabled when PE on.
+// Key Vault. Private endpoints + diagnostics; public access controlled independently.
 // =============================================================================
 
 @description('Azure region.')
@@ -17,9 +17,6 @@ param uniqueSuffix string
 
 @description('Short region+env suffix, e.g. swc-dev.')
 param nameSuffix string
-
-@description('Deploy private endpoints.')
-param deployPrivateEndpoints bool = true
 
 @description('Public network access where supported: Enabled (with optional IP allowlist) or Disabled.')
 @allowed([
@@ -68,9 +65,6 @@ var cosmosName = 'cosmos-${teamName}-${nameSuffix}'
 var searchName = take('srch-${teamName}-${nameSuffix}', 60)
 var keyVaultName = take('kv-${teamCompact}-${uniqueSuffix}', 24)
 
-var hasIpRule = !empty(allowedClientIpRanges)
-var networkDefaultAction = (hasIpRule || publicNetworkAccess == 'Disabled') ? 'Deny' : 'Allow'
-
 // -----------------------------------------------------------------------------
 // Storage
 // -----------------------------------------------------------------------------
@@ -89,7 +83,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2026-09-01' = {
     allowSharedKeyAccess: false
     publicNetworkAccess: publicNetworkAccess
     networkAcls: {
-      defaultAction: networkDefaultAction
+      defaultAction: 'Deny'
       bypass: 'AzureServices'
       ipRules: map(allowedClientIpRanges, r => { value: r, action: 'Allow' })
     }
@@ -151,7 +145,7 @@ resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2026-03-15' = {
     publicNetworkAccess: publicNetworkAccess
     ipRules: map(allowedClientIpRanges, r => { ipAddressOrRange: r })
     disableLocalAuth: true
-    disableKeyBasedMetadataWriteAccess: false
+    disableKeyBasedMetadataWriteAccess: true
     minimalTlsVersion: 'Tls12'
   }
 }
@@ -195,11 +189,7 @@ resource search 'Microsoft.Search/searchServices@2026-11-01' = {
     networkRuleSet: {
       ipRules: map(allowedClientIpRanges, r => { value: r })
     }
-    authOptions: {
-      aadOrApiKey: {
-        aadAuthFailureMode: 'http401WithBearerChallenge'
-      }
-    }
+    disableLocalAuth: true
   }
 }
 
@@ -242,7 +232,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2026-05-15' = if (deployKeyVault) {
     softDeleteRetentionInDays: 7
     publicNetworkAccess: publicNetworkAccess
     networkAcls: {
-      defaultAction: networkDefaultAction
+      defaultAction: 'Deny'
       bypass: 'AzureServices'
       ipRules: map(allowedClientIpRanges, r => { value: r })
     }
@@ -273,7 +263,7 @@ resource keyVaultDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-p
 // Private endpoints
 // -----------------------------------------------------------------------------
 
-module peStorage 'private-endpoint.bicep' = if (deployPrivateEndpoints) {
+module peStorage 'private-endpoint.bicep' = {
   name: 'pe-${teamName}-blob'
   params: {
     location: location
@@ -288,7 +278,7 @@ module peStorage 'private-endpoint.bicep' = if (deployPrivateEndpoints) {
   }
 }
 
-module peCosmos 'private-endpoint.bicep' = if (deployPrivateEndpoints) {
+module peCosmos 'private-endpoint.bicep' = {
   name: 'pe-${teamName}-cosmos'
   params: {
     location: location
@@ -303,7 +293,7 @@ module peCosmos 'private-endpoint.bicep' = if (deployPrivateEndpoints) {
   }
 }
 
-module peSearch 'private-endpoint.bicep' = if (deployPrivateEndpoints) {
+module peSearch 'private-endpoint.bicep' = {
   name: 'pe-${teamName}-search'
   params: {
     location: location
@@ -318,7 +308,7 @@ module peSearch 'private-endpoint.bicep' = if (deployPrivateEndpoints) {
   }
 }
 
-module peKeyVault 'private-endpoint.bicep' = if (deployPrivateEndpoints && deployKeyVault) {
+module peKeyVault 'private-endpoint.bicep' = if (deployKeyVault) {
   name: 'pe-${teamName}-kv'
   params: {
     location: location
