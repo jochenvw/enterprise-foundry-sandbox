@@ -11,11 +11,11 @@ param remoteVnetId string
 @description('Peering name.')
 param peeringName string
 
-resource localVnet 'Microsoft.Network/virtualNetworks@2024-05-01' existing = {
+resource localVnet 'Microsoft.Network/virtualNetworks@2026-03-01' existing = {
   name: localVnetName
 }
 
-resource peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2024-05-01' = {
+resource peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2026-03-01' = {
   parent: localVnet
   name: peeringName
   properties: {

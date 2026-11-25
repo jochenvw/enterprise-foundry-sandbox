@@ -30,19 +30,19 @@ var keyVaultSecretsUser = '4633458b-17de-408a-b874-0445c86b69e6'
 // Cosmos DB SQL built-in data-plane role: "Cosmos DB Built-in Data Contributor".
 var cosmosDataContributor = '00000000-0000-0000-0000-000000000002'
 
-resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' existing = {
+resource storage 'Microsoft.Storage/storageAccounts@2026-09-01' existing = {
   name: storageName
 }
 
-resource search 'Microsoft.Search/searchServices@2024-06-01-preview' existing = {
+resource search 'Microsoft.Search/searchServices@2026-11-01' existing = {
   name: searchName
 }
 
-resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' existing = {
+resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2026-03-15' existing = {
   name: cosmosName
 }
 
-resource keyVault 'Microsoft.KeyVault/vaults@2024-11-01' existing = if (deployKeyVault) {
+resource keyVault 'Microsoft.KeyVault/vaults@2026-05-15' existing = if (deployKeyVault) {
   name: keyVaultName
 }
 
@@ -87,7 +87,7 @@ resource keyVaultRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if 
 }
 
 // Cosmos DB data-plane RBAC uses the account-scoped sqlRoleAssignments resource.
-resource cosmosRole 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-11-15' = {
+resource cosmosRole 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2026-03-15' = {
   parent: cosmos
   name: guid(cosmos.id, teamPrincipalId, cosmosDataContributor)
   properties: {

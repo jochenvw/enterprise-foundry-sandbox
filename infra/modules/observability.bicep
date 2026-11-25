@@ -18,7 +18,7 @@ param appInsightsName string
 @minValue(30)
 param retentionInDays int = 30
 
-resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2025-02-01' = {
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2026-03-01' = {
   name: logAnalyticsName
   location: location
   tags: tags

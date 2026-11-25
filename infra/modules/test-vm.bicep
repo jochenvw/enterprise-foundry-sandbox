@@ -25,7 +25,7 @@ param adminPassword string
 @description('VM size. Small by default to keep cost low.')
 param vmSize string = 'Standard_B2s'
 
-resource nic 'Microsoft.Network/networkInterfaces@2024-05-01' = {
+resource nic 'Microsoft.Network/networkInterfaces@2026-03-01' = {
   name: 'nic-${vmName}'
   location: location
   tags: tags
@@ -44,7 +44,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2024-05-01' = {
   }
 }
 
-resource vm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
+resource vm 'Microsoft.Compute/virtualMachines@2026-04-01' = {
   name: vmName
   location: location
   tags: tags

@@ -3,23 +3,10 @@
 // -----------------------------------------------------------------------------
 // Creates four resource groups (observability, hub, team-a, team-b) and calls
 // resource-group-scoped modules to build a hub/spoke Foundry topology with a
-// central APIM Standard v2 AI Gateway. Region: Sweden Central.
+// central Azure AI Gateway (Microsoft.ApiManagement/aigateways). Region: Sweden Central.
 //
-// Verified current API versions (az provider show, see docs/implementation-gaps.md):
-//   OperationalInsights/workspaces     2025-02-01
-//   Insights/components                2020-02-02
-//   Insights/diagnosticSettings        2021-05-01-preview
-//   Network/virtualNetworks            2024-05-01
-//   Network/privateDnsZones            2024-06-01
-//   Network/privateEndpoints           2024-05-01
-//   CognitiveServices/accounts         2025-06-01 (+projects/deployments)
-//   ApiManagement/service              2024-06-01-preview (Standard v2)
-//   Storage/storageAccounts            2024-01-01
-//   DocumentDB/databaseAccounts        2024-11-15
-//   Search/searchServices              2024-06-01-preview
-//   KeyVault/vaults                    2024-11-01
-//   ManagedIdentity/userAssignedId.    2024-11-30
-//   Authorization/roleAssignments      2022-04-01
+// API versions follow published stable Bicep schemas, not just provider metadata.
+// See docs/deployment.md for the verified version baseline and exceptions.
 // =============================================================================
 
 targetScope = 'subscription'
@@ -47,7 +34,7 @@ param testVmAdminPassword string = ''
 @description('Deploy private endpoints for supported resources. Derived from networkAccessMode; override only for special cases.')
 param deployPrivateEndpoints bool = networkAccessMode != 'publicIpOnly'
 
-@description('''Network access posture for data-plane resources (Foundry accounts, APIM, Storage, Cosmos, Search, Key Vault):
+@description('''Network access posture for data-plane resources (Foundry accounts, Storage, Cosmos, Search, Key Vault):
 - hybridPePlusIp: private endpoints PLUS an operator-IP allowlist on public access (reachable out-of-the-box). Default.
 - publicIpOnly:   public access restricted to the operator IP allowlist; no private endpoints.
 - privateOnly:    private endpoints only, public access disabled (access via VPN/jumpbox/test VM).''')
@@ -58,11 +45,19 @@ param deployPrivateEndpoints bool = networkAccessMode != 'publicIpOnly'
 ])
 param networkAccessMode string = 'hybridPePlusIp'
 
-@description('Operator public IP or CIDR to allowlist on public access (e.g. 203.0.113.5 or 203.0.113.0/29). Required for hybridPePlusIp / publicIpOnly so you can reach resources; the deploy script auto-detects and passes it. Ignored for privateOnly.')
+@description('Operator public IPs or CIDRs to allowlist on public access (e.g. ["203.0.113.0/24"]). Corporate networks often egress through several NAT addresses, so the deploy script detects all of them and passes their /24 ranges. Ignored for privateOnly.')
+param allowedClientIpRanges array = []
+
+@description('Legacy single operator IP/CIDR; merged into allowedClientIpRanges.')
 param allowedClientIp string = ''
 
-@description('Full ARM resource ID of an EXISTING APIM (v2 tier) to use as the AI Gateway (BYO APIM). When empty, a Standard v2 APIM is deployed. Consumption/classic tiers are not supported by the native AI Gateway.')
-param existingApimResourceId string = ''
+@description('Tag Storage, Cosmos DB and Key Vault with the governance opt-out tag so tenant "modify" policies do not force publicNetworkAccess=Disabled, keeping the operator IP allowlist effective (needed for live portal demos). Local auth stays disabled in the template regardless.')
+param exemptDataResourcesFromNetworkPolicy bool = false
+
+@description('Tag name/value that tenant governance policies honour as an opt-out (MCAPS default: SecurityControl=Ignore).')
+param networkPolicyExemptionTag object = {
+  SecurityControl: 'Ignore'
+}
 
 @description('Inject the Foundry agent runtime into each team spoke\'s dedicated agent subnet (standard-agent VNet integration). Enabled by default.')
 param enableAgentNetworkInjection bool = true
@@ -79,29 +74,21 @@ param deployAgentCapabilityHost bool = true
 ])
 param searchSkuName string = 'basic'
 
-@description('APIM SKU when deploying a new gateway. Must be a v2 tier (native AI Gateway requirement); StandardV2 supports VNet integration + inbound private endpoint.')
-@allowed([
-  'BasicV2'
-  'StandardV2'
-  'PremiumV2'
-])
-param apimSkuName string = 'StandardV2'
-
 @description('Central model deployment name (stable alias-friendly name).')
 param centralModelDeploymentName string = 'enterprise-gpt5-mini'
 
 @description('Central model name. Availability varies by region/date - keep parameterized.')
 param centralModelName string = 'gpt-5-mini'
 
-@description('Central model version. Use a concrete version or "latest".')
-param centralModelVersion string = 'latest'
+@description('Central model version. Prefer a concrete version verified by check-model-availability.sh.')
+param centralModelVersion string = '2025-08-07'
 
 @description('Central model deployment SKU name.')
-param centralModelSkuName string = 'Standard'
+param centralModelSkuName string = 'GlobalStandard'
 
 @description('Central model deployment capacity (no PTU).')
 @minValue(1)
-param centralModelCapacity int = 1
+param centralModelCapacity int = 50
 
 @description('Team identifiers used to build spoke names. Order is significant.')
 param teamNames array = [
@@ -118,33 +105,34 @@ param teamAVnetAddressPrefix string = '10.20.0.0/16'
 @description('Team B spoke VNet address space.')
 param teamBVnetAddressPrefix string = '10.30.0.0/16'
 
-@description('Enable the APIM content safety policy (requires content safety capability).')
-param enableContentSafetyPolicy bool = true
+@description('Apply a contentSafety policy on each team alias. Off by default: the AI Gateway content safety policy is still aligning with API 2026-11-01.')
+param enableContentSafetyPolicy bool = false
 
-@description('Log full prompt/completion bodies in APIM. Disabled by default for privacy.')
-param enablePromptBodyLogging bool = false
-
-@description('Per-team tokens-per-minute (TPM) limits applied at the APIM gateway, aligned by index with teamNames.')
+@description('Per-team tokens-per-minute (TPM) limits applied on each team alias (counted per caller identity), aligned by index with teamNames.')
 param teamTokenLimitsPerMinute array = [
-  1000
-  1000
+  20000
+  20000
 ]
 
-@description('Apply the per-team azure-openai-token-limit policy at the gateway.')
+@description('Apply the per-team tokenLimit policy on each team alias.')
 param enableTokenLimitPolicy bool = true
 
-@description('Emit per-team token metrics at the gateway.')
-param enableTokenMetricPolicy bool = true
+@description('Deploy an inbound private endpoint to the AI Gateway. Requires the gated subscription feature Microsoft.Network/AllowPrivateEndpoints, so it is off by default and the gateway ingress stays public behind Entra ID auth.')
+param deployAiGatewayPrivateEndpoint bool = false
 
-@description('Inference API version enforced by the gateway and used by the team connections.')
-param inferenceApiVersion string = '2024-10-21'
+@description('Optional object ID granted AI Gateway Models User on the FIRST team alias only, plus Foundry User on that team\'s account, for smoke and isolation tests. The deploy script passes the signed-in user.')
+param gatewayTestPrincipalId string = ''
 
-@description('Auth type for the team Foundry project -> APIM connection.')
+@description('Principal type of gatewayTestPrincipalId.')
 @allowed([
-  'ApiKey'
-  'ProjectManagedIdentity'
+  'User'
+  'Group'
+  'ServicePrincipal'
 ])
-param foundryToApimAuthType string = 'ApiKey'
+param gatewayTestPrincipalType string = 'User'
+
+@description('Team project connections send Responses API requests upstream to the gateway (false = Chat Completions).')
+param useResponsesApiUpstream bool = true
 
 @description('Optional explicit unique suffix. When empty, derived from subscription id + environment.')
 param uniqueSuffixOverride string = ''
@@ -178,10 +166,13 @@ var nameSuffix = '${regionToken}-${environmentName}'
 var publicNetworkAccess = networkAccessMode == 'privateOnly' ? 'Disabled' : 'Enabled'
 
 // Operator IP allowlist is only meaningful when public access is enabled.
-var effectiveAllowedClientIp = networkAccessMode == 'privateOnly' ? '' : allowedClientIp
+// Storage rejects /32 (and /31) prefixes, so single hosts are passed bare.
+var requestedClientIpRanges = union(allowedClientIpRanges, empty(allowedClientIp) ? [] : [allowedClientIp])
+var effectiveAllowedClientIpRanges = networkAccessMode == 'privateOnly'
+  ? []
+  : map(requestedClientIpRanges, r => endsWith(r, '/32') ? substring(r, 0, length(r) - 3) : r)
 
-// BYO APIM: when an existing APIM resource ID is supplied, do not deploy one.
-var deployApim = empty(existingApimResourceId)
+var dataResourceTags = exemptDataResourcesFromNetworkPolicy ? union(tags, networkPolicyExemptionTag) : tags
 
 // Resource group names.
 var rgObservabilityName = 'rg-${namePrefix}-observability-${nameSuffix}'
@@ -193,25 +184,25 @@ var rgTeamBName = 'rg-${namePrefix}-${teamNames[1]}-${nameSuffix}'
 // Resource groups
 // -----------------------------------------------------------------------------
 
-resource rgObservability 'Microsoft.Resources/resourceGroups@2024-03-01' = {
+resource rgObservability 'Microsoft.Resources/resourceGroups@2025-04-01' = {
   name: rgObservabilityName
   location: location
   tags: tags
 }
 
-resource rgHub 'Microsoft.Resources/resourceGroups@2024-03-01' = {
+resource rgHub 'Microsoft.Resources/resourceGroups@2025-04-01' = {
   name: rgHubName
   location: location
   tags: tags
 }
 
-resource rgTeamA 'Microsoft.Resources/resourceGroups@2024-03-01' = {
+resource rgTeamA 'Microsoft.Resources/resourceGroups@2025-04-01' = {
   name: rgTeamAName
   location: location
   tags: tags
 }
 
-resource rgTeamB 'Microsoft.Resources/resourceGroups@2024-03-01' = {
+resource rgTeamB 'Microsoft.Resources/resourceGroups@2025-04-01' = {
   name: rgTeamBName
   location: location
   tags: tags
@@ -275,7 +266,7 @@ module networkHub 'modules/network-hub.bicep' = {
     tags: tags
     vnetName: hubVnetName
     addressPrefix: hubVnetAddressPrefix
-    apimSubnetPrefix: '${hubBase}.1.0/24'
+    aiGatewaySubnetPrefix: '${hubBase}.1.0/24'
     privateEndpointsSubnetPrefix: '${hubBase}.2.0/24'
     sharedServicesSubnetPrefix: '${hubBase}.3.0/24'
   }
@@ -369,7 +360,6 @@ module peerBToHub 'modules/network-peering.bicep' = {
 // -----------------------------------------------------------------------------
 
 var privateDnsZoneNames = [
-  'privatelink.azure-api.net' // APIM gateway private endpoint
   'privatelink.cognitiveservices.azure.com' // Cognitive Services / Foundry
   'privatelink.openai.azure.com' // Azure OpenAI inference
   'privatelink.services.ai.azure.com' // AI Services / Foundry
@@ -394,14 +384,13 @@ module privateDns 'modules/private-dns.bicep' = {
 }
 
 // Zone index map (order must match privateDnsZoneNames above).
-var zoneIdxApi = 0
-var zoneIdxCognitive = 1
-var zoneIdxOpenAi = 2
-var zoneIdxAiServices = 3
-var zoneIdxSearch = 4
-var zoneIdxCosmos = 5
-var zoneIdxBlob = 6
-var zoneIdxVault = 7
+var zoneIdxCognitive = 0
+var zoneIdxOpenAi = 1
+var zoneIdxAiServices = 2
+var zoneIdxSearch = 3
+var zoneIdxCosmos = 4
+var zoneIdxBlob = 5
+var zoneIdxVault = 6
 
 // -----------------------------------------------------------------------------
 // Team BYO data resources (Storage / Cosmos / Search / Key Vault)
@@ -412,13 +401,13 @@ module teamAData 'modules/foundry-team-data.bicep' = {
   scope: rgTeamA
   params: {
     location: location
-    tags: tags
+    tags: dataResourceTags
     teamName: teamNames[0]
     uniqueSuffix: uniqueSuffix
     nameSuffix: nameSuffix
     deployPrivateEndpoints: deployPrivateEndpoints
     publicNetworkAccess: publicNetworkAccess
-    allowedClientIp: effectiveAllowedClientIp
+    allowedClientIpRanges: effectiveAllowedClientIpRanges
     searchSkuName: searchSkuName
     privateEndpointsSubnetId: networkTeamA.outputs.privateEndpointsSubnetId
     logAnalyticsWorkspaceId: observabilityTeamA.outputs.logAnalyticsWorkspaceId
@@ -434,13 +423,13 @@ module teamBData 'modules/foundry-team-data.bicep' = {
   scope: rgTeamB
   params: {
     location: location
-    tags: tags
+    tags: dataResourceTags
     teamName: teamNames[1]
     uniqueSuffix: uniqueSuffix
     nameSuffix: nameSuffix
     deployPrivateEndpoints: deployPrivateEndpoints
     publicNetworkAccess: publicNetworkAccess
-    allowedClientIp: effectiveAllowedClientIp
+    allowedClientIpRanges: effectiveAllowedClientIpRanges
     searchSkuName: searchSkuName
     privateEndpointsSubnetId: networkTeamB.outputs.privateEndpointsSubnetId
     logAnalyticsWorkspaceId: observabilityTeamB.outputs.logAnalyticsWorkspaceId
@@ -464,7 +453,7 @@ module foundryCentral 'modules/foundry-central.bicep' = {
     accountName: 'fndry-central-${nameSuffix}'
     projectName: 'proj-central'
     publicNetworkAccess: publicNetworkAccess
-    allowedClientIp: effectiveAllowedClientIp
+    allowedClientIpRanges: effectiveAllowedClientIpRanges
     deployPrivateEndpoints: deployPrivateEndpoints
     privateEndpointsSubnetId: networkHub.outputs.privateEndpointsSubnetId
     cognitivePrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxCognitive]
@@ -490,7 +479,7 @@ module foundryTeamA 'modules/foundry-team.bicep' = {
     projectName: 'proj-${teamNames[0]}'
     teamName: teamNames[0]
     publicNetworkAccess: publicNetworkAccess
-    allowedClientIp: effectiveAllowedClientIp
+    allowedClientIpRanges: effectiveAllowedClientIpRanges
     enableAgentNetworkInjection: enableAgentNetworkInjection
     deployPrivateEndpoints: deployPrivateEndpoints
     privateEndpointsSubnetId: networkTeamA.outputs.privateEndpointsSubnetId
@@ -512,7 +501,7 @@ module foundryTeamB 'modules/foundry-team.bicep' = {
     projectName: 'proj-${teamNames[1]}'
     teamName: teamNames[1]
     publicNetworkAccess: publicNetworkAccess
-    allowedClientIp: effectiveAllowedClientIp
+    allowedClientIpRanges: effectiveAllowedClientIpRanges
     enableAgentNetworkInjection: enableAgentNetworkInjection
     deployPrivateEndpoints: deployPrivateEndpoints
     privateEndpointsSubnetId: networkTeamB.outputs.privateEndpointsSubnetId
@@ -525,67 +514,76 @@ module foundryTeamB 'modules/foundry-team.bicep' = {
 }
 
 // -----------------------------------------------------------------------------
-// AI Gateway (hub): deployed Standard v2 APIM, or BYO existing v2 APIM.
-// Deployed first / in parallel with the Foundry accounts; the team projects
-// connect to it afterwards (gateway-first ordering).
+// Azure AI Gateway (hub). The gateway joins the hub integration subnet so its
+// managed identity reaches central Foundry through the private endpoint. Each
+// team gets its own alias (token limit + optional content safety) and a runtime
+// role scoped to that alias only.
 // -----------------------------------------------------------------------------
 
-var centralFoundryAccountName = 'fndry-central-${nameSuffix}'
-var centralOpenAiBaseUrl = 'https://${centralFoundryAccountName}.openai.azure.com'
+var aiGatewayName = take('aigw-${namePrefix}-${nameSuffix}-${uniqueSuffix}', 24)
+var centralModelVersionOrEmpty = centralModelVersion == 'latest' ? '' : centralModelVersion
 
-// BYO APIM resolution: when existingApimResourceId is supplied, reference it
-// (name + resource group derived from the ARM ID); otherwise deploy a new APIM.
-var apimDeployName = 'apim-${namePrefix}-gw-${nameSuffix}'
-var existingApimParts = split(existingApimResourceId, '/')
-var apimEffectiveName = deployApim ? apimDeployName : last(existingApimParts)
-var apimResourceGroupName = deployApim ? rgHubName : existingApimParts[4]
-
-module apimGateway 'modules/apim-ai-gateway.bicep' = {
-  name: 'apim-ai-gateway'
-  scope: resourceGroup(apimResourceGroupName)
+module aiGateway 'modules/ai-gateway.bicep' = {
+  name: 'ai-gateway'
+  scope: rgHub
   params: {
+    gatewayName: aiGatewayName
     location: location
     tags: tags
-    apimName: apimEffectiveName
-    deployApim: deployApim
-    apimSkuName: apimSkuName
-    apimSubnetId: networkHub.outputs.apimSubnetId
-    privateEndpointsSubnetId: networkHub.outputs.privateEndpointsSubnetId
-    apimPrivateDnsZoneId: privateDns.outputs.zoneIds[zoneIdxApi]
-    deployPrivateEndpoints: deployPrivateEndpoints
-    logAnalyticsWorkspaceId: observability.outputs.logAnalyticsWorkspaceId
-    appInsightsId: observability.outputs.appInsightsId
-    appInsightsConnectionString: observability.outputs.appInsightsConnectionString
-    centralOpenAiBaseUrl: centralOpenAiBaseUrl
-    centralDeploymentName: centralModelDeploymentName
-    openAiApiVersion: inferenceApiVersion
-    teamNames: teamNames
-    teamTokenLimitsPerMinute: teamTokenLimitsPerMinute
-    enableTokenLimitPolicy: enableTokenLimitPolicy
-    enableTokenMetricPolicy: enableTokenMetricPolicy
-    enablePromptBodyLogging: enablePromptBodyLogging
-    enableContentSafetyPolicy: enableContentSafetyPolicy
+    integrationSubnetId: networkHub.outputs.aiGatewaySubnetId
   }
-  dependsOn: [
-    rgHub
-  ]
 }
 
-// -----------------------------------------------------------------------------
-// RBAC: APIM -> central model (only APIM); team identities -> own data only
-// -----------------------------------------------------------------------------
-
+// RBAC: only the gateway identity may call the central model (Foundry User).
 module rbacCentral 'modules/rbac-central.bicep' = {
   name: 'rbac-central'
   scope: rgHub
   params: {
-    centralAccountName: centralFoundryAccountName
-    apimPrincipalId: apimGateway.outputs.apimPrincipalId
+    centralAccountName: foundryCentral.outputs.accountName
+    gatewayPrincipalId: aiGateway.outputs.principalId
+  }
+}
+
+module aiGatewayModels 'modules/ai-gateway-models.bicep' = {
+  name: 'ai-gateway-models'
+  scope: rgHub
+  params: {
+    gatewayName: aiGateway.outputs.gatewayName
+    foundryAccountId: foundryCentral.outputs.accountId
+    foundryEndpoint: foundryCentral.outputs.accountEndpoint
+    deploymentName: foundryCentral.outputs.modelDeploymentName
+    modelVersion: centralModelVersionOrEmpty
+    teamNames: teamNames
+    teamTokenLimitsPerMinute: teamTokenLimitsPerMinute
+    enableTokenLimitPolicy: enableTokenLimitPolicy
+    enableContentSafetyPolicy: enableContentSafetyPolicy
   }
   dependsOn: [
-    foundryCentral
+    rbacCentral
   ]
 }
+
+module aiGatewayPrivateEndpoint 'modules/ai-gateway-private-endpoint.bicep' = if (deployAiGatewayPrivateEndpoint) {
+  name: 'ai-gateway-private-endpoint'
+  scope: rgHub
+  params: {
+    location: location
+    tags: tags
+    gatewayId: aiGateway.outputs.gatewayId
+    gatewayHostName: aiGateway.outputs.hostName
+    subnetId: networkHub.outputs.privateEndpointsSubnetId
+    linkedVnetIds: [
+      networkHub.outputs.vnetId
+      networkTeamA.outputs.vnetId
+      networkTeamB.outputs.vnetId
+    ]
+    privateEndpointName: 'pe-${aiGatewayName}'
+  }
+}
+
+// -----------------------------------------------------------------------------
+// RBAC: team identities -> own data only
+// -----------------------------------------------------------------------------
 
 module rbacTeamA 'modules/rbac-team.bicep' = {
   name: 'rbac-team-a'
@@ -655,9 +653,55 @@ module agentTeamB 'modules/foundry-team-agent.bicep' = if (enableAgentNetworkInj
 }
 
 // -----------------------------------------------------------------------------
-// Admin-connected model connections: surface the central, APIM-governed model
-// into each team project (replaces the old post-deploy REST script).
+// Admin-connected model connections: surface each team's governed gateway alias
+// in its project. The project identity gets AI Gateway Models User on its own
+// alias only, so the gateway rejects calls to the other team's alias.
 // -----------------------------------------------------------------------------
+
+var aiGatewayConnectionName = '${aiGatewayName}-model-gateway'
+
+module aliasRoleTeamA 'modules/ai-gateway-alias-role.bicep' = {
+  name: 'aigw-alias-role-team-a'
+  scope: rgHub
+  params: {
+    gatewayName: aiGateway.outputs.gatewayName
+    aliasName: aiGatewayModels.outputs.aliasNames[0]
+    principalId: foundryTeamA.outputs.projectPrincipalId
+  }
+}
+
+module aliasRoleTeamB 'modules/ai-gateway-alias-role.bicep' = {
+  name: 'aigw-alias-role-team-b'
+  scope: rgHub
+  params: {
+    gatewayName: aiGateway.outputs.gatewayName
+    aliasName: aiGatewayModels.outputs.aliasNames[1]
+    principalId: foundryTeamB.outputs.projectPrincipalId
+  }
+}
+
+module aliasRoleTester 'modules/ai-gateway-alias-role.bicep' = if (!empty(gatewayTestPrincipalId)) {
+  name: 'aigw-alias-role-tester'
+  scope: rgHub
+  params: {
+    gatewayName: aiGateway.outputs.gatewayName
+    aliasName: aiGatewayModels.outputs.aliasNames[0]
+    principalId: gatewayTestPrincipalId
+    principalType: gatewayTestPrincipalType
+  }
+}
+
+// The tester also needs Foundry User on the first team's account to call that
+// project's connected model.
+module foundryUserTester 'modules/foundry-user-role.bicep' = if (!empty(gatewayTestPrincipalId)) {
+  name: 'foundry-user-tester-team-a'
+  scope: rgTeamA
+  params: {
+    accountName: foundryTeamA.outputs.accountName
+    principalId: gatewayTestPrincipalId
+    principalType: gatewayTestPrincipalType
+  }
+}
 
 module modelConnTeamA 'modules/foundry-model-connection.bicep' = {
   name: 'model-conn-team-a'
@@ -665,16 +709,14 @@ module modelConnTeamA 'modules/foundry-model-connection.bicep' = {
   params: {
     foundryAccountName: foundryTeamA.outputs.accountName
     foundryProjectName: foundryTeamA.outputs.projectName
-    apimName: apimGateway.outputs.apimName
-    apimResourceGroupName: apimResourceGroupName
-    apimSubscriptionName: 'sub-${teamNames[0]}'
-    apimGatewayUrl: apimGateway.outputs.gatewayUrl
-    teamName: teamNames[0]
-    centralDeploymentName: centralModelDeploymentName
+    connectionName: aiGatewayConnectionName
+    gatewayId: aiGateway.outputs.gatewayId
+    gatewayUrl: aiGateway.outputs.gatewayUrl
+    gatewayLocation: location
+    aliasName: aiGatewayModels.outputs.aliasNames[0]
     centralModelName: centralModelName
-    centralModelVersion: centralModelVersion == 'latest' ? '' : centralModelVersion
-    inferenceApiVersion: inferenceApiVersion
-    authType: foundryToApimAuthType
+    centralModelVersion: centralModelVersionOrEmpty
+    useResponsesApi: useResponsesApiUpstream
   }
 }
 
@@ -684,16 +726,14 @@ module modelConnTeamB 'modules/foundry-model-connection.bicep' = {
   params: {
     foundryAccountName: foundryTeamB.outputs.accountName
     foundryProjectName: foundryTeamB.outputs.projectName
-    apimName: apimGateway.outputs.apimName
-    apimResourceGroupName: apimResourceGroupName
-    apimSubscriptionName: 'sub-${teamNames[1]}'
-    apimGatewayUrl: apimGateway.outputs.gatewayUrl
-    teamName: teamNames[1]
-    centralDeploymentName: centralModelDeploymentName
+    connectionName: aiGatewayConnectionName
+    gatewayId: aiGateway.outputs.gatewayId
+    gatewayUrl: aiGateway.outputs.gatewayUrl
+    gatewayLocation: location
+    aliasName: aiGatewayModels.outputs.aliasNames[1]
     centralModelName: centralModelName
-    centralModelVersion: centralModelVersion == 'latest' ? '' : centralModelVersion
-    inferenceApiVersion: inferenceApiVersion
-    authType: foundryToApimAuthType
+    centralModelVersion: centralModelVersionOrEmpty
+    useResponsesApi: useResponsesApiUpstream
   }
 }
 
@@ -735,14 +775,18 @@ output teamBAppInsightsConnectionString string = observabilityTeamB.outputs.appI
 output teamALogAnalyticsWorkspaceId string = observabilityTeamA.outputs.logAnalyticsWorkspaceId
 output teamBLogAnalyticsWorkspaceId string = observabilityTeamB.outputs.logAnalyticsWorkspaceId
 output uniqueSuffix string = uniqueSuffix
-output apimName string = apimGateway.outputs.apimName
-output apimResourceGroup string = apimResourceGroupName
-output apimResourceId string = apimGateway.outputs.apimId
-output apimGatewayUrl string = apimGateway.outputs.gatewayUrl
+output aiGatewayName string = aiGateway.outputs.gatewayName
+output aiGatewayResourceGroup string = rgHub.name
+output aiGatewayId string = aiGateway.outputs.gatewayId
+output aiGatewayUrl string = aiGateway.outputs.gatewayUrl
+output aiGatewayModelsEndpoint string = '${aiGateway.outputs.gatewayUrl}/default/models/openai/v1'
+output teamAAlias string = aiGatewayModels.outputs.aliasNames[0]
+output teamBAlias string = aiGatewayModels.outputs.aliasNames[1]
 output networkAccessMode string = networkAccessMode
-output allowedClientIp string = effectiveAllowedClientIp
+output allowedClientIpRanges array = effectiveAllowedClientIpRanges
 output centralFoundryName string = foundryCentral.outputs.accountName
 output centralFoundryEndpoint string = foundryCentral.outputs.accountEndpoint
+output centralProjectName string = foundryCentral.outputs.projectName
 output centralModelDeployment string = foundryCentral.outputs.modelDeploymentName
 output teamAFoundryName string = foundryTeamA.outputs.accountName
 output teamBFoundryName string = foundryTeamB.outputs.accountName
@@ -750,3 +794,7 @@ output teamAProjectName string = foundryTeamA.outputs.projectName
 output teamBProjectName string = foundryTeamB.outputs.projectName
 output teamAModelConnectionName string = modelConnTeamA.outputs.connectionName
 output teamBModelConnectionName string = modelConnTeamB.outputs.connectionName
+output teamAFoundryModel string = modelConnTeamA.outputs.foundryModel
+output teamBFoundryModel string = modelConnTeamB.outputs.foundryModel
+output teamAProjectEndpoint string = 'https://${foundryTeamA.outputs.accountName}.services.ai.azure.com/api/projects/${foundryTeamA.outputs.projectName}'
+output teamBProjectEndpoint string = 'https://${foundryTeamB.outputs.accountName}.services.ai.azure.com/api/projects/${foundryTeamB.outputs.projectName}'

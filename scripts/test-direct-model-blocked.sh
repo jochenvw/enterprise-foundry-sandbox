@@ -15,7 +15,7 @@ if [[ -z "${CENTRAL}" ]]; then
   exit 1
 fi
 
-ENDPOINT="https://${CENTRAL}.openai.azure.com/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=2024-10-21"
+ENDPOINT="https://${CENTRAL}.openai.azure.com/openai/deployments/${DEPLOYMENT}/chat/completions?api-version=${INFERENCE_API_VERSION}"
 PAYLOAD='{"messages":[{"role":"user","content":"hello"}],"max_completion_tokens":8}'
 
 echo "==> Attempting DIRECT call to central model (should be blocked): ${ENDPOINT}"
@@ -26,18 +26,20 @@ echo "==> Attempting DIRECT call to central model (should be blocked): ${ENDPOIN
 TOKEN="$(az account get-access-token --resource https://cognitiveservices.azure.com \
   --query accessToken -o tsv 2>/dev/null || true)"
 
-CODE="$(curl -s -o /tmp/direct.json -w '%{http_code}' \
+RESPONSE_FILE="$(mktemp)"
+trap 'rm -f "${RESPONSE_FILE}"' EXIT
+CODE="$(curl -sS --max-time 120 -o "${RESPONSE_FILE}" -w '%{http_code}' \
   -H "Authorization: Bearer ${TOKEN}" \
   -H 'Content-Type: application/json' \
-  -d "${PAYLOAD}" "${ENDPOINT}" || echo "000")"
+  -d "${PAYLOAD}" "${ENDPOINT}" || true)"
 
 echo "HTTP ${CODE}"
-head -c 300 /tmp/direct.json 2>/dev/null || true
+head -c 300 "${RESPONSE_FILE}" 2>/dev/null || true
 echo
 
 case "${CODE}" in
   401|403)
-    echo "OK: direct access denied (authorization) - teams must use the APIM route." ;;
+    echo "OK: direct access denied (authorization) - teams must use the AI Gateway." ;;
   000)
     echo "OK: direct access not reachable (private networking) - expected from outside the VNet." ;;
   2*)

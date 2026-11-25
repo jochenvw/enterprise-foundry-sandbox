@@ -20,14 +20,11 @@
     "networkAccessMode": {
       "value": "hybridPePlusIp"
     },
-    "allowedClientIp": {
-      "value": "167.220.196.0/23"
+    "allowedClientIpRanges": {
+      "value": []
     },
-    "existingApimResourceId": {
-      "value": ""
-    },
-    "apimSkuName": {
-      "value": "StandardV2"
+    "exemptDataResourcesFromNetworkPolicy": {
+      "value": true
     },
     "enableAgentNetworkInjection": {
       "value": true
@@ -48,7 +45,7 @@
       "value": "GlobalStandard"
     },
     "centralModelCapacity": {
-      "value": 1
+      "value": 50
     },
     "teamNames": {
       "value": [
@@ -68,26 +65,17 @@
     "enableContentSafetyPolicy": {
       "value": false
     },
-    "enablePromptBodyLogging": {
-      "value": false
-    },
     "teamTokenLimitsPerMinute": {
       "value": [
-        1000,
-        1000
+        20000,
+        20000
       ]
     },
     "enableTokenLimitPolicy": {
       "value": true
     },
-    "enableTokenMetricPolicy": {
-      "value": true
-    },
-    "inferenceApiVersion": {
-      "value": "2024-10-21"
-    },
-    "foundryToApimAuthType": {
-      "value": "ApiKey"
+    "deployAiGatewayPrivateEndpoint": {
+      "value": false
     }
   }
 }

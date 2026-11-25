@@ -1,7 +1,7 @@
 // =============================================================================
 // Team Foundry: AIServices account + project in a spoke, with optional agent
 // network injection into the dedicated agent subnet. BYO data connections are
-// created post-deploy (see scripts/postdeploy-foundry-connections.sh).
+// created by foundry-team-agent.bicep.
 // =============================================================================
 
 @description('Azure region.')
@@ -26,8 +26,8 @@ param teamName string
 ])
 param publicNetworkAccess string = 'Disabled'
 
-@description('Operator IP/CIDR to allowlist when public access is Enabled. Empty leaves no IP rule.')
-param allowedClientIp string = ''
+@description('Operator IPs/CIDRs to allowlist when public access is Enabled. Empty leaves no IP rule. Pass single hosts bare (no /32) for Storage compatibility.')
+param allowedClientIpRanges array = []
 
 @description('Deploy private endpoint for the account.')
 param deployPrivateEndpoints bool = true
@@ -53,9 +53,9 @@ param aiServicesPrivateDnsZoneId string
 @description('Log Analytics workspace ID for diagnostics.')
 param logAnalyticsWorkspaceId string
 
-var hasIpRule = !empty(allowedClientIp)
+var hasIpRule = !empty(allowedClientIpRanges)
 var networkDefaultAction = (hasIpRule || publicNetworkAccess == 'Disabled') ? 'Deny' : 'Allow'
-var ipRules = hasIpRule ? [ { value: allowedClientIp } ] : []
+var ipRules = map(allowedClientIpRanges, r => { value: r })
 
 var networkInjections = enableAgentNetworkInjection
   ? [
@@ -67,7 +67,7 @@ var networkInjections = enableAgentNetworkInjection
     ]
   : null
 
-resource account 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
+resource account 'Microsoft.CognitiveServices/accounts@2026-09-01' = {
   name: accountName
   location: location
   tags: tags
@@ -91,7 +91,7 @@ resource account 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
   }
 }
 
-resource project 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' = {
+resource project 'Microsoft.CognitiveServices/accounts/projects@2026-09-01' = {
   parent: account
   name: projectName
   location: location
@@ -100,7 +100,7 @@ resource project 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' = {
   }
   properties: {
     displayName: projectName
-    description: 'Team ${teamName} build project. Consumes models via the central APIM AI Gateway.'
+    description: 'Team ${teamName} build project. Consumes models via the central Azure AI Gateway.'
   }
 }
 

@@ -31,7 +31,7 @@ var agentSubnetName = 'snet-foundry-agents'
 var privateEndpointsSubnetName = 'snet-private-endpoints'
 var teamAppsSubnetName = 'snet-team-apps'
 
-resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
+resource vnet 'Microsoft.Network/virtualNetworks@2026-03-01' = {
   name: vnetName
   location: location
   tags: tags

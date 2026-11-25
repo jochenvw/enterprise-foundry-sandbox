@@ -2,15 +2,17 @@
 
 This repository deploys an **enterprise-shaped Microsoft Foundry simulation** on Azure
 using Bicep. It models a hub/spoke topology with central model governance and team
-isolation, where teams consume approved models **only** through a central APIM AI Gateway.
+isolation, where teams consume approved models **only** through a central **Azure AI
+Gateway** (`Microsoft.ApiManagement/aigateways`, API `2026-11-01`, public preview, no SLA).
 
 ## Diagram
 
 ```mermaid
 flowchart LR
     subgraph HUB["Hub / Platform"]
-        APIM["APIM v2\nAI Gateway"]
+        AIGW["Azure AI Gateway\nteam aliases + policies"]
         CF["Central Foundry\nApproved model deployments"]
+        OP["Demo operator\nbrowser / shell egress"]
         LAW_C["Central Log Analytics\nCentral Application Insights"]
         DNS["Private DNS Zones"]
     end
@@ -29,22 +31,24 @@ flowchart LR
         LAW_B["Team B Log Analytics\nTeam B Application Insights"]
     end
 
-    TAA -->|private inference call| APIM
-    TBA -->|private inference call| APIM
-    TAF -->|APIM-backed model connection| APIM
-    TBF -->|APIM-backed model connection| APIM
-    APIM -->|managed identity / governed route| CF
+    TAA -->|Entra ID, team alias| AIGW
+    TBA -->|Entra ID, team alias| AIGW
+    TAF -->|gateway model connection| AIGW
+    TBF -->|gateway model connection| AIGW
+    AIGW -->|managed identity via VNet integration + PE| CF
 
-    APIM --> LAW_C
+    AIGW -. OpenTelemetry (manual setup) .-> LAW_C
     CF --> LAW_C
     TAF --> LAW_A
     TADS --> LAW_A
     TBF --> LAW_B
     TBDS --> LAW_B
+    OP -. allowlisted data-plane access .-> CF
+    OP -. allowlisted data-plane access .-> TAF
+    OP -. allowlisted data-plane access .-> TBF
     TAA -. telemetry/app instrumentation .-> LAW_A
     TBA -. telemetry/app instrumentation .-> LAW_B
 
-    DNS --- APIM
     DNS --- CF
     DNS --- TAF
     DNS --- TBF
@@ -71,43 +75,60 @@ all AAD-auth — together with a project **capability host**. The project manage
 granted the data-plane roles plus the control-plane **Cosmos DB Operator** role the
 capability host requires (`infra/modules/foundry-team-agent.bicep`).
 
-### APIM v2 AI Gateway (hub)
-The shared AI traffic control plane. It can be **deployed** (Standard v2 by default) or you
-can **bring your own** existing v2 APIM (`existingApimResourceId`). The gateway is
-provisioned **first**, then the central and team Foundries connect to it (gateway-first
-ordering). It exposes stable enterprise model aliases per team, routes them to the central
-deployment using its **managed identity** (no keys), and enforces token limits, token
-metrics, logging, and optional content safety. An optional account-level native AI Gateway
-association (`scripts/enable-ai-gateway.sh`) adds control-plane visibility and project
-auto-enroll on top.
+### Azure AI Gateway (hub)
+The shared AI traffic control plane (`infra/modules/ai-gateway.bicep`), named
+`aigw-<prefix>-<suffix>-<unique>` (max 24 characters). It has a system-assigned managed
+identity holding **Foundry User** on the central account, and outbound **VNet
+integration** into the hub subnet `snet-aigw-integration` (delegated to
+`Microsoft.App/environments`, NSG without custom rules), so backend calls reach central
+Foundry through its private endpoint and the hub's private DNS zones.
 
-Routes:
+`infra/modules/ai-gateway-models.bicep` publishes the central deployment as a Foundry
+model provider (`foundry-central`, managed-identity auth) plus one **alias per team**,
+`<team>-<deploymentName>` (for example `team-a-enterprise-gpt5-mini`). Each alias has a
+`tokenLimit` policy and an optional `contentSafety` policy. Each team project identity
+gets **AI Gateway Models User** on its own alias only, and each team project has a
+gateway model connection (`<gateway>-model-gateway`) exposing `<connection>/<alias>`.
+
+Ingress is public and Entra-ID only (no API keys); an inbound private endpoint is
+optional (`deployAiGatewayPrivateEndpoint`, gated feature). Runtime endpoint:
 
 ```
-POST /ai/team-a/models/enterprise-fast/chat/completions
-POST /ai/team-a/models/enterprise-reasoning/chat/completions
-POST /ai/team-b/models/enterprise-fast/chat/completions
-POST /ai/team-b/models/enterprise-reasoning/chat/completions
+POST https://<gateway-host>/default/models/openai/v1/chat/completions   {"model": "team-a-enterprise-gpt5-mini", ...}
+POST https://<gateway-host>/default/models/openai/v1/responses          {"model": "team-b-enterprise-gpt5-mini", ...}
 ```
+
+See [`ai-gateway.md`](ai-gateway.md) for details and caveats.
 
 ### Observability
-The hub has a central Log Analytics Workspace + Application Insights for APIM and the
-central Foundry. Each team spoke also has its own Log Analytics Workspace + Application
+The hub has a central Log Analytics Workspace + Application Insights; the central
+Foundry sends diagnostics to it. The AI Gateway has no diagnostic settings; its
+OpenTelemetry exporter is a manual post-deploy step (see `implementation-gaps.md`). Each team spoke also has its own Log Analytics Workspace + Application
 Insights, and that team's Foundry account plus BYO data resources send diagnostics to it.
 Team-built agents/apps can point at the team-local Application Insights instance.
 
+### Operator access for live demos
+In the default `hybridPePlusIp` mode, the public data-plane endpoints are deny-by-default
+and allow the operator's detected egress ranges. The dev parameter file also opts
+Storage, Cosmos DB, and Key Vault out of the tenant policy that otherwise forces
+`publicNetworkAccess=Disabled`; that exception is limited to these data resources and
+should be reviewed before use outside a demo environment. `deploy.sh` runs the
+reachability check automatically. Run `scripts/allow-demo-access.sh` when the operator
+moves networks. The check validates network reachability, not portal identity or data
+authorization. See [`demo-access.md`](demo-access.md).
+
 ## Why these choices
 
-- **APIM lives in the hub** because it is the shared AI traffic control plane that all
+- **The AI Gateway lives in the hub** because it is the shared AI traffic control plane that all
   teams depend on; centralizing it gives one governance, throttling, and metering point.
 - **Team Foundries live in spokes** because they represent team-owned build environments
   that must be isolated from one another while still reaching shared platform services
   over private peering.
-- **APIM v2 (Standard v2 by default)** is selected because it supports the AI Gateway
-  policies (token limit, token metrics, content safety), outbound VNet integration, and
-  inbound private endpoints at a lower cost than Premium, without classic-VNet complexity.
-  A v2 tier is also required by the native AI Gateway association. Bring-your-own APIM is
-  supported as long as it is a v2 tier (Consumption/serverless is not).
+- **Azure AI Gateway instead of API Management** because it is purpose-built for model
+  traffic: model providers, aliases, token-limit and content-safety policies, and
+  alias-scoped Entra RBAC are declarative resources, with no policy XML, products, or
+  subscription keys. It also supports outbound VNet integration and an inbound private
+  endpoint. The trade-off is preview status (no SLA) and less mature telemetry.
 
 ## Intentional exclusions
 
@@ -121,18 +142,20 @@ Team-built agents/apps can point at the team-local Application Insights instance
 
 ## Trust boundaries
 
-- **Team ⟷ Team**: enforced by separate spokes, separate identities, separate APIM
-  products/subscriptions, and no cross-team RBAC. Team A cannot call Team B's route and
-  cannot read Team B's data.
+- **Team ⟷ Team**: enforced by separate spokes, separate identities, separate gateway
+  aliases with alias-scoped RBAC, and no cross-team RBAC. Team A cannot call Team B's alias
+  and cannot read Team B's data.
 - **Team ⟷ Central model**: teams have no data-plane role on the central account and (with
-  private networking) no network path to it. The APIM managed identity is the only
+  private networking) no network path to it. The AI Gateway managed identity is the only
   sanctioned caller.
 
 ## Data / control-plane flows
 
-1. A team app calls its APIM route with its team subscription key (private gateway).
-2. APIM validates the subscription scope, maps the alias to the central deployment, and
-   authenticates to the central Foundry with its managed identity.
-3. APIM forwards the request to the central model endpoint and returns the response.
-4. Token usage, latency, status, and request metadata flow to Application Insights /
-   Log Analytics. Prompt/response bodies are not logged unless explicitly enabled.
+1. A team app (or the team project, through its connection) calls the gateway with an
+   Entra token and its team alias in the `model` field.
+2. The gateway checks that the caller holds AI Gateway Models User on that alias and
+   applies the alias's token limit (and content safety, if enabled).
+3. The gateway calls the central Foundry deployment with its managed identity over the
+   hub VNet integration and private endpoint, and returns the response.
+4. Gateway telemetry is available only after configuring its OpenTelemetry exporter;
+   central and team Foundry diagnostics flow to Log Analytics.

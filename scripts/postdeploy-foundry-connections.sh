@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Verify that each team''s Foundry project has the admin-connected model
-# connection to the central APIM AI Gateway.
+# connection to the central Azure AI Gateway.
 #
 # The connection itself is now created by the Bicep template
 # (infra/modules/foundry-model-connection.bicep), not by this script. A team
-# project''s connection of category ''ApiManagement'' points at the team''s gateway
-# route and surfaces the centrally governed model. This script is a read-only
+# project''s connection of category ''ApiManagement'' (kind AiGateway) points at the
+# gateway and surfaces the team''s governed alias. This script is a read-only
 # check that the templated connections exist and are shaped as expected.
 # See docs/implementation-gaps.md.
 set -euo pipefail
@@ -23,7 +23,7 @@ TEAM_A_PROJ="$(deployment_output teamAProjectName)"
 TEAM_B_PROJ="$(deployment_output teamBProjectName)"
 CONN_A="$(deployment_output teamAModelConnectionName)"
 CONN_B="$(deployment_output teamBModelConnectionName)"
-API_VERSION="2025-06-01"
+API_VERSION="${FOUNDRY_API_VERSION}"
 
 rc=0
 
@@ -48,8 +48,8 @@ verify_connection() {
   fi
 }
 
-verify_connection "${TEAM_A_RG}" "${TEAM_A_ACC}" "${TEAM_A_PROJ}" "${CONN_A:-apim-central-models}" "team-a"
-verify_connection "${TEAM_B_RG}" "${TEAM_B_ACC}" "${TEAM_B_PROJ}" "${CONN_B:-apim-central-models}" "team-b"
+verify_connection "${TEAM_A_RG}" "${TEAM_A_ACC}" "${TEAM_A_PROJ}" "${CONN_A}" "team-a"
+verify_connection "${TEAM_B_RG}" "${TEAM_B_ACC}" "${TEAM_B_PROJ}" "${CONN_B}" "team-b"
 
 if [[ "${rc}" -eq 0 ]]; then
   echo "All team model connections verified."

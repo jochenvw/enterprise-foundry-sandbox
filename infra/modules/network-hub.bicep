@@ -1,5 +1,6 @@
 // =============================================================================
-// Hub VNet: APIM outbound subnet (delegated), private endpoints, shared services
+// Hub VNet: AI Gateway integration subnet (delegated), private endpoints,
+// shared services
 // =============================================================================
 
 @description('Azure region.')
@@ -14,8 +15,8 @@ param vnetName string
 @description('Hub VNet address space.')
 param addressPrefix string = '10.10.0.0/16'
 
-@description('APIM outbound integration subnet prefix. Delegated to Microsoft.Web/serverFarms (required by APIM Standard v2).')
-param apimSubnetPrefix string = '10.10.1.0/24'
+@description('AI Gateway outbound integration subnet prefix (/27 minimum). Delegated to Microsoft.App/environments and dedicated to the gateway.')
+param aiGatewaySubnetPrefix string = '10.10.1.0/24'
 
 @description('Private endpoints subnet prefix.')
 param privateEndpointsSubnetPrefix string = '10.10.2.0/24'
@@ -23,50 +24,22 @@ param privateEndpointsSubnetPrefix string = '10.10.2.0/24'
 @description('Shared services subnet prefix.')
 param sharedServicesSubnetPrefix string = '10.10.3.0/24'
 
-var apimSubnetName = 'snet-apim-outbound'
+var aiGatewaySubnetName = 'snet-aigw-integration'
 var privateEndpointsSubnetName = 'snet-private-endpoints'
 var sharedServicesSubnetName = 'snet-shared-services'
 
-// APIM (Standard v2) VNet integration requires the outbound subnet to be
-// associated with an NSG. These rules follow the documented minimum for the
-// Standard v2 (workspace/stv2) gateway. See https://aka.ms/apimvnet
-resource apimNsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
-  name: '${apimSubnetName}-nsg'
+// AI Gateway VNet integration requires an NSG on the subnet but no custom rules:
+// the gateway reaches backends over TCP 443 inside the virtual network.
+resource aiGatewayNsg 'Microsoft.Network/networkSecurityGroups@2026-03-01' = {
+  name: '${aiGatewaySubnetName}-nsg'
   location: location
   tags: tags
   properties: {
-    securityRules: [
-      {
-        name: 'AllowApimManagement'
-        properties: {
-          priority: 100
-          direction: 'Inbound'
-          access: 'Allow'
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          destinationPortRange: '3443'
-          sourceAddressPrefix: 'ApiManagement'
-          destinationAddressPrefix: 'VirtualNetwork'
-        }
-      }
-      {
-        name: 'AllowAzureLoadBalancer'
-        properties: {
-          priority: 110
-          direction: 'Inbound'
-          access: 'Allow'
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          destinationPortRange: '6390'
-          sourceAddressPrefix: 'AzureLoadBalancer'
-          destinationAddressPrefix: 'VirtualNetwork'
-        }
-      }
-    ]
+    securityRules: []
   }
 }
 
-resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
+resource vnet 'Microsoft.Network/virtualNetworks@2026-03-01' = {
   name: vnetName
   location: location
   tags: tags
@@ -78,19 +51,17 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
     }
     subnets: [
       {
-        // APIM Standard v2 outbound VNet integration requires delegation to
-        // Microsoft.Web/serverFarms. The subnet must not host other resources.
-        name: apimSubnetName
+        name: aiGatewaySubnetName
         properties: {
-          addressPrefix: apimSubnetPrefix
+          addressPrefix: aiGatewaySubnetPrefix
           networkSecurityGroup: {
-            id: apimNsg.id
+            id: aiGatewayNsg.id
           }
           delegations: [
             {
-              name: 'apim-delegation'
+              name: 'Microsoft.App.environments'
               properties: {
-                serviceName: 'Microsoft.Web/serverFarms'
+                serviceName: 'Microsoft.App/environments'
               }
             }
           ]
@@ -117,6 +88,6 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
 
 output vnetId string = vnet.id
 output vnetName string = vnet.name
-output apimSubnetId string = vnet.properties.subnets[0].id
+output aiGatewaySubnetId string = vnet.properties.subnets[0].id
 output privateEndpointsSubnetId string = vnet.properties.subnets[1].id
 output sharedServicesSubnetId string = vnet.properties.subnets[2].id

@@ -23,7 +23,7 @@
       "y": 62,
       "width": 1600,
       "height": 24,
-      "text": "Hub/spoke topology \u00b7 private networking \u00b7 central governed model via APIM AI Gateway",
+      "text": "Hub/spoke topology \u00b7 private networking \u00b7 central governed model via Azure AI Gateway (preview)",
       "fontSize": 15,
       "fontFamily": 2,
       "strokeColor": "#000000",
@@ -434,7 +434,7 @@
       "y": 1002,
       "width": 650,
       "height": 80,
-      "text": "Team A access (where they work):\n\u2022 Work ONLY in proj-team-a within this spoke\n\u2022 Data-plane RBAC: fndry-team-a MSI \u2192 own Storage/Search/Cosmos/Key Vault\n\u2022 Consume the central model ONLY via APIM (no direct access)",
+      "text": "Team A access (where they work):\n\u2022 Work ONLY in proj-team-a within this spoke\n\u2022 Data-plane RBAC: fndry-team-a MSI \u2192 own Storage/Search/Cosmos/Key Vault\n\u2022 Consume the central model ONLY via the AI Gateway alias (no direct access)",
       "fontSize": 11,
       "fontFamily": 2,
       "strokeColor": "#000000",
@@ -521,7 +521,7 @@
       "y": 360,
       "width": 740,
       "height": 43,
-      "text": "snet-apim-outbound \u00b7 10.10.1.0/24\ndelegated Microsoft.Web/serverFarms \u00b7 NSG attached",
+      "text": "snet-aigw-integration \u00b7 10.10.1.0/24\ndelegated Microsoft.App/environments \u00b7 NSG attached",
       "fontSize": 11,
       "fontFamily": 2,
       "strokeColor": "#000000",
@@ -608,7 +608,7 @@
       "y": 638,
       "width": 770,
       "height": 67,
-      "text": "APIM Standard v2  apim-ai-gw  \u2014 AI Gateway\nPer-team products + subscription keys \u00b7 token-limit \u00b7 MSI routing\nOutbound \u2192 apim subnet \u00b7 Inbound PE \u2192 PE subnet",
+      "text": "Azure AI Gateway  aigw-ai-swc-dev-*  (preview)\nPer-team aliases + alias-scoped Entra RBAC \u00b7 tokenLimit \u00b7 MSI routing\nOutbound \u2192 aigw integration subnet \u00b7 Inbound: public (optional PE)",
       "fontSize": 12,
       "fontFamily": 2,
       "strokeColor": "#000000",
@@ -666,7 +666,7 @@
       "y": 894,
       "width": 770,
       "height": 62,
-      "text": "Private DNS zones (8): azure-api \u00b7 cognitiveservices \u00b7 openai \u00b7 services.ai\n\u00b7 search \u00b7 documents \u00b7 blob \u00b7 vaultcore\nLinked to hub + both spokes",
+      "text": "Private DNS zones (7): cognitiveservices \u00b7 openai \u00b7 services.ai\n\u00b7 search \u00b7 documents \u00b7 blob \u00b7 vaultcore\nLinked to hub + both spokes",
       "fontSize": 11,
       "fontFamily": 2,
       "strokeColor": "#000000",
@@ -695,7 +695,7 @@
       "y": 1008,
       "width": 770,
       "height": 80,
-      "text": "Central cloud team access (what they own):\n\u2022 Govern the hub: approve & host the model centrally\n\u2022 Own APIM gateway, products, keys & policies\n\u2022 NO access to team spokes or team BYO data",
+      "text": "Central cloud team access (what they own):\n\u2022 Govern the hub: approve & host the model centrally\n\u2022 Own the AI Gateway, aliases, policies & alias RBAC\n\u2022 NO access to team spokes or team BYO data",
       "fontSize": 11,
       "fontFamily": 2,
       "strokeColor": "#000000",
@@ -1028,11 +1028,40 @@
       "y": 1002,
       "width": 650,
       "height": 80,
-      "text": "Team B access (where they work):\n\u2022 Work ONLY in proj-team-b within this spoke\n\u2022 Data-plane RBAC: fndry-team-b MSI \u2192 own Storage/Search/Cosmos/Key Vault\n\u2022 Consume the central model ONLY via APIM (no direct access)",
+      "text": "Team B access (where they work):\n\u2022 Work ONLY in proj-team-b within this spoke\n\u2022 Data-plane RBAC: fndry-team-b MSI \u2192 own Storage/Search/Cosmos/Key Vault\n\u2022 Consume the central model ONLY via the AI Gateway alias (no direct access)",
       "fontSize": 11,
       "fontFamily": 2,
       "strokeColor": "#000000",
       "id": "t72",
+      "textAlign": "left",
+      "verticalAlign": "top"
+    },
+    {
+      "type": "rectangle",
+      "x": 850,
+      "y": 1180,
+      "width": 800,
+      "height": 150,
+      "strokeColor": "#D13438",
+      "backgroundColor": "#FFF4CE",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "id": "r73",
+      "roundness": {
+        "type": 3
+      }
+    },
+    {
+      "type": "text",
+      "x": 864,
+      "y": 1192,
+      "width": 770,
+      "height": 99,
+      "text": "Operator demo access (current network):\n\u2022 Deploy checks Foundry + connected data endpoint reachability\n\u2022 New network \u2192 allow-demo-access.sh adds detected egress ranges\n\u2022 Dev opt-out tag keeps Storage / Cosmos / Key Vault IP rules effective\n\u2022 Network reachability is separate from portal RBAC / data permissions",
+      "fontSize": 11,
+      "fontFamily": 2,
+      "strokeColor": "#000000",
+      "id": "t74",
       "textAlign": "left",
       "verticalAlign": "top"
     },
@@ -1046,7 +1075,7 @@
       "backgroundColor": "transparent",
       "fillStyle": "solid",
       "strokeWidth": 3,
-      "id": "r73",
+      "id": "r75",
       "roundness": {
         "type": 3
       }
@@ -1061,7 +1090,7 @@
       "fontSize": 15,
       "fontFamily": 3,
       "strokeColor": "#000000",
-      "id": "t74",
+      "id": "t76",
       "textAlign": "left",
       "verticalAlign": "top"
     },
@@ -1075,7 +1104,7 @@
       "backgroundColor": "#F3F2F1",
       "fillStyle": "solid",
       "strokeWidth": 2,
-      "id": "r75",
+      "id": "r77",
       "roundness": {
         "type": 3
       }
@@ -1085,12 +1114,12 @@
       "x": 864,
       "y": 1526,
       "width": 770,
-      "height": 43,
-      "text": "Central + team Log Analytics / Application Insights\nDiagnostic settings from APIM \u00b7 Foundry (central + teams) \u00b7 Storage/Search/Cosmos/Key Vault",
+      "height": 62,
+      "text": "Central + team Log Analytics / Application Insights\nDiagnostic settings from Foundry (central + teams) \u00b7 Storage/Search/Cosmos/Key Vault\nAI Gateway OpenTelemetry export: manual post-deploy step",
       "fontSize": 11,
       "fontFamily": 2,
       "strokeColor": "#000000",
-      "id": "t76",
+      "id": "t78",
       "textAlign": "left",
       "verticalAlign": "top"
     },
@@ -1112,7 +1141,7 @@
           0
         ]
       ],
-      "id": "a77",
+      "id": "a79",
       "endArrowhead": "arrow",
       "startArrowhead": "arrow"
     },
@@ -1126,7 +1155,7 @@
       "fontSize": 11,
       "fontFamily": 2,
       "strokeColor": "#000000",
-      "id": "t78",
+      "id": "t80",
       "textAlign": "center",
       "verticalAlign": "top"
     },
@@ -1148,7 +1177,7 @@
           0
         ]
       ],
-      "id": "a79",
+      "id": "a81",
       "endArrowhead": "arrow",
       "startArrowhead": "arrow"
     },
@@ -1162,7 +1191,7 @@
       "fontSize": 11,
       "fontFamily": 2,
       "strokeColor": "#000000",
-      "id": "t80",
+      "id": "t82",
       "textAlign": "center",
       "verticalAlign": "top"
     },
@@ -1184,7 +1213,7 @@
           -5
         ]
       ],
-      "id": "a81",
+      "id": "a83",
       "endArrowhead": "arrow",
       "strokeStyle": "dashed"
     },
@@ -1194,11 +1223,11 @@
       "y": 640,
       "width": 300,
       "height": 40,
-      "text": "uses model via APIM\n(connection)",
+      "text": "uses team alias via\nAI Gateway (connection)",
       "fontSize": 10,
       "fontFamily": 2,
       "strokeColor": "#000000",
-      "id": "t82",
+      "id": "t84",
       "textAlign": "center",
       "verticalAlign": "top"
     },
@@ -1220,7 +1249,7 @@
           -5
         ]
       ],
-      "id": "a83",
+      "id": "a85",
       "endArrowhead": "arrow",
       "strokeStyle": "dashed"
     },
@@ -1230,11 +1259,11 @@
       "y": 640,
       "width": 300,
       "height": 40,
-      "text": "uses model via APIM\n(connection)",
+      "text": "uses team alias via\nAI Gateway (connection)",
       "fontSize": 10,
       "fontFamily": 2,
       "strokeColor": "#000000",
-      "id": "t84",
+      "id": "t86",
       "textAlign": "center",
       "verticalAlign": "top"
     },
@@ -1256,7 +1285,7 @@
           16
         ]
       ],
-      "id": "a85",
+      "id": "a87",
       "endArrowhead": "arrow"
     },
     {
@@ -1265,11 +1294,11 @@
       "y": 724,
       "width": 360,
       "height": 23,
-      "text": "MSI: Cognitive Services OpenAI User",
+      "text": "MSI: Foundry User",
       "fontSize": 10,
       "fontFamily": 2,
       "strokeColor": "#000000",
-      "id": "t86",
+      "id": "t88",
       "textAlign": "left",
       "verticalAlign": "top"
     },
@@ -1291,7 +1320,7 @@
           448
         ]
       ],
-      "id": "a87",
+      "id": "a89",
       "endArrowhead": "arrow"
     },
     {
@@ -1312,7 +1341,7 @@
           448
         ]
       ],
-      "id": "a88",
+      "id": "a90",
       "endArrowhead": "arrow"
     },
     {
@@ -1333,7 +1362,7 @@
           448
         ]
       ],
-      "id": "a89",
+      "id": "a91",
       "endArrowhead": "arrow"
     },
     {
@@ -1346,7 +1375,7 @@
       "backgroundColor": "#FDE7E9",
       "fillStyle": "solid",
       "strokeWidth": 2,
-      "id": "r90",
+      "id": "r92",
       "roundness": {
         "type": 3
       }
@@ -1357,11 +1386,11 @@
       "y": 1190,
       "width": 770,
       "height": 43,
-      "text": "Isolation enforced: teams CANNOT call the central model endpoint directly\n(public access disabled \u2192 403; only APIM MSI is granted the data-plane role).",
+      "text": "Isolation enforced: teams CANNOT call the central model endpoint directly\n(no role on central Foundry \u2192 401/403; only the AI Gateway MSI is granted Foundry User).",
       "fontSize": 11,
       "fontFamily": 2,
       "strokeColor": "#000000",
-      "id": "t91",
+      "id": "t93",
       "textAlign": "left",
       "verticalAlign": "top"
     }

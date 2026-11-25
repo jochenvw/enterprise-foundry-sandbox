@@ -7,21 +7,23 @@
 
 A production-shaped, hub/spoke Azure simulation of an enterprise Microsoft Foundry
 topology: one **central Foundry** owning approved model deployments, two **team
-Foundries** (Team A / Team B) in isolated spokes with BYO data, and a central **APIM
-v2 AI Gateway** that teams must use to consume models. The gateway can be **deployed**
-(Standard v2 by default) or you can **bring your own** existing v2 APIM. Region:
-**Sweden Central**.
+Foundries** (Team A / Team B) in isolated spokes with BYO data, and a central **Azure AI
+Gateway** (`Microsoft.ApiManagement/aigateways`, public preview) that teams must use to
+consume models. Region: **Sweden Central**.
 
-The environment is reachable **out-of-the-box**: by default it keeps private endpoints
-**and** allowlists the operator's public IP on the data plane (hybrid network mode), and
-the deploy script auto-detects that IP for you.
+The development environment is designed to support live demos: it keeps private
+endpoints **and** allowlists the operator's egress ranges on the data plane (hybrid
+network mode). The deploy script detects multiple egress addresses; the dev parameters
+also opt Storage, Cosmos DB, and Key Vault out of the tenant policy that otherwise
+forces public access off. This is a deliberate demo-only exception; see
+[`docs/demo-access.md`](docs/demo-access.md).
 
 ## What gets deployed
 
 - **Observability**: central Log Analytics Workspace + Application Insights for the hub,
   plus per-team Log Analytics Workspace + Application Insights in each spoke, with
   diagnostic settings on every supported resource.
-- **Hub** (`rg-ai-hub-swc-dev`): hub VNet, APIM v2 AI Gateway (deployed or BYO), central
+- **Hub** (`rg-ai-hub-swc-dev`): hub VNet, Azure AI Gateway (VNet-integrated), central
   Foundry (`AIServices`) + project + model deployment, private DNS zones.
 - **Spokes** (`rg-ai-team-a-swc-dev`, `rg-ai-team-b-swc-dev`): per-team VNet, Foundry
   account + project, BYO Storage / Cosmos DB / AI Search / Key Vault, private endpoints.
@@ -29,9 +31,9 @@ the deploy script auto-detects that IP for you.
   Cosmos (thread) / Storage (file) / Search (vector) connections plus a capability host.
 - **Networking**: hub↔spoke peering, private endpoints, private DNS linked to all VNets,
   optional operator-IP allowlist on the data plane.
-- **Governance**: APIM products/APIs/subscriptions per team, AI-gateway policies
-  (routing via managed identity, token limits, token metrics, optional content safety,
-  metadata-only logging), and least-privilege RBAC.
+- **Governance**: one gateway alias per team (`<team>-<deployment>`) with a token limit
+  and optional content safety, routing to the central model with the gateway's managed
+  identity, alias-scoped RBAC for team isolation, and least-privilege RBAC elsewhere.
 
 ## Layout
 
@@ -39,10 +41,9 @@ the deploy script auto-detects that IP for you.
 infra/
   main.bicep                 # subscription-scoped entrypoint
   main.parameters.dev.json
-  modules/                   # observability, network, dns, foundry, data, apim, rbac, vm
-  policies/                  # APIM policy XML
+  modules/                   # observability, network, dns, foundry, data, ai-gateway, rbac, vm
 scripts/                     # validate / what-if / deploy / tests / cleanup
-docs/                        # architecture, deployment, operations, security, gaps, troubleshooting
+docs/                        # architecture, AI Gateway, demo access, deployment, operations, security, gaps, troubleshooting
 ```
 
 ## Quick start
@@ -53,36 +54,65 @@ az login
 ./scripts/what-if.sh         # preview
 ./scripts/deploy.sh          # deploy (auto-detects your IP; model connections in the template)
 ./scripts/postdeploy-foundry-connections.sh   # verify the templated connections
-./scripts/test-model-through-apim.sh
-./scripts/enable-ai-gateway.sh                 # optional: account-level native AI Gateway association
+./scripts/test-model-through-gateway.sh       # health, inference, isolation, project, direct-blocked
 ```
 
-The gateway comes up first, then the Foundry accounts connect to it. To bring your own
-APIM, set `existingApimResourceId` (it must be a **v2** tier — Consumption/serverless is
-not supported by the native AI Gateway). To allowlist a specific IP instead of the
-auto-detected one, set `ALLOWED_CLIENT_IP` before running `deploy.sh`; choose a different
-posture with `NETWORK_ACCESS_MODE` (`hybridPePlusIp` | `publicIpOnly` | `privateOnly`).
+`deploy.sh` grants the signed-in identity access to the Team A alias for the tests
+(`SKIP_TEST_PRINCIPAL=1` to skip). It detects all of this network's egress addresses
+(corporate NAT pools use several) and allowlists their /24 ranges; override with
+`ALLOWED_CLIENT_IPS` / `EXTRA_CLIENT_IP_RANGES` / `CLIENT_IP_PREFIX`. Choose a different
+posture with `NETWORK_ACCESS_MODE` (`hybridPePlusIp` | `privateOnly`; `publicIpOnly`
+blocks the gateway's egress to central Foundry).
 
-See [`docs/deployment.md`](docs/deployment.md) for details and
-[`docs/architecture.md`](docs/architecture.md) for the design and rationale.
+**Live demos:** every deploy runs `scripts/test-demo-access.sh` by default. It checks
+that the current shell can reach all Foundry accounts and connected data resources,
+and fails closed if resource enumeration fails. From a new network, run
+`scripts/allow-demo-access.sh` to add its ranges in place and verify them, without
+redeploying. This check is for network reachability, not portal sign-in or resource
+permissions. See [`docs/demo-access.md`](docs/demo-access.md).
+
+See [`docs/deployment.md`](docs/deployment.md) for details,
+[`docs/architecture.md`](docs/architecture.md) for the design and rationale, and
+[`docs/ai-gateway.md`](docs/ai-gateway.md) for the gateway pattern.
+
+## Current API baseline
+
+Azure APIs are aligned with published stable schemas as of **2026-11-25** (except the
+preview AI Gateway API `2026-11-01`), using
+Azure CLI **2.93.0** and Bicep **0.49.2**. There are no third-party package dependencies;
+Python checks use only the standard library. See the version table and local checks
+in [`docs/deployment.md`](docs/deployment.md).
+
+Applications call `POST https://<gateway-host>/default/models/openai/v1/chat/completions`
+(or `/responses`) with an Entra token for `https://ai.gateway.azure.com` and the team
+alias in the JSON `model` field, e.g. `team-a-enterprise-gpt5-mini`. Team Foundry
+projects use the model `<connection>/<alias>`. Azure AI Gateway is in **public preview
+with no SLA** (API `2026-11-01`).
 
 ## Key design points
 
-- Teams call **APIM routes only**; they have no RBAC and (with private networking) no
-  path to the central model directly.
-- APIM authenticates to the central Foundry with its **managed identity** — no API keys.
+- Teams call **their gateway alias only**; they have no role on the central account and
+  (with private networking) no path to the central model directly.
+- Each team project identity holds **AI Gateway Models User on its own alias only**, so
+  Team A cannot call Team B's alias.
+- The gateway authenticates to the central Foundry with its **managed identity**
+  (Foundry User) over hub VNet integration and the central private endpoint. No API keys
+  are created anywhere; callers use Entra ID.
 - The operator-IP allowlist applies to the **data plane** (Foundry, Storage, Cosmos,
-  Search, Key Vault) only. APIM is intentionally not IP-filtered, because agent → gateway
-  traffic originates from Azure, not the operator's IP; it stays subscription-key gated.
-- **Prompt body logging is off by default**; only metadata/token metrics are logged.
+  Search, Key Vault) only. Gateway ingress is public and Entra-ID gated; an inbound
+  private endpoint is optional and needs a gated subscription feature.
+- Demo access uses detected egress ranges, normally widened to `/24`; the development
+  parameters opt Storage, Cosmos DB, and Key Vault out of the applicable tenant policy.
+  Review the broader policy exemption before using it outside a demo environment.
+- Gateway telemetry (OpenTelemetry exporter) is a manual post-deploy step.
 - No PTU, no Azure Firewall, no CMK, no availability zones — intentional, low-cost scope.
 
 ## Intentional gaps
 
-A couple of items can't be fully expressed in Bicep today (disabling APIM public access
-post-PE, the optional content-safety backend). Each is compensated with an idempotent
-script and documented in [`docs/implementation-gaps.md`](docs/implementation-gaps.md). The
-team project↔APIM model connections are now created by the template itself
+A few items are not automated today: gateway telemetry export, the gated inbound private
+endpoint, and content safety while the policy aligns with the preview API. Each is
+documented in [`docs/implementation-gaps.md`](docs/implementation-gaps.md). The team
+project → gateway model connections are created by the template itself
 (`infra/modules/foundry-model-connection.bicep`).
 
 ## Canonical source & acceleration
@@ -90,7 +120,10 @@ team project↔APIM model connections are now created by the template itself
 This sandbox is loosely modelled on, and best understood alongside, the official Microsoft
 sample it draws from:
 
-- **Canonical Bicep sample** — [Private network + Standard agent + APIM setup (`16-...`)](https://github.com/microsoft-foundry/foundry-samples/tree/main/infrastructure/infrastructure-setup-bicep/16-private-network-standard-agent-apim-setup)
-  in `microsoft-foundry/foundry-samples`. Treat that as the authoritative reference; this repo is an experiment on top of those ideas.
+- **Canonical Bicep sample** — [Private network + Standard agent setup (`16-...`)](https://github.com/microsoft-foundry/foundry-samples/tree/main/infrastructure/infrastructure-setup-bicep/16-private-network-standard-agent-apim-setup)
+  in `microsoft-foundry/foundry-samples` (its gateway layer used API Management; this repo
+  uses Azure AI Gateway instead). Treat that as the authoritative reference; this repo is an experiment on top of those ideas.
+- **Azure AI Gateway** — [documentation](https://learn.microsoft.com/azure/api-management/)
+  and [samples](https://github.com/Azure/ai-gateway).
 - **GitHub Copilot for Azure skills** — the [plugin skills](https://github.com/microsoft/GitHub-Copilot-for-Azure/tree/main/plugin)
   can accelerate work like this (Foundry provisioning, private networking, model deployment, RBAC). Much of this sandbox was built with their help.

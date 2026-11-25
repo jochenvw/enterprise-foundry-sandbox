@@ -1,6 +1,6 @@
 // =============================================================================
 // Central Foundry: AIServices account (hub) hosting approved model deployments.
-// Teams must NOT be granted direct access; APIM is the only sanctioned caller.
+// Teams must NOT be granted direct access; the AI Gateway is the only sanctioned caller.
 // =============================================================================
 
 @description('Azure region.')
@@ -22,8 +22,8 @@ param projectName string
 ])
 param publicNetworkAccess string = 'Disabled'
 
-@description('Operator IP/CIDR to allowlist when public access is Enabled. Empty leaves no IP rule.')
-param allowedClientIp string = ''
+@description('Operator IPs/CIDRs to allowlist when public access is Enabled. Empty leaves no IP rule. Pass single hosts bare (no /32) for Storage compatibility.')
+param allowedClientIpRanges array = []
 
 @description('Deploy private endpoint for the account.')
 param deployPrivateEndpoints bool = true
@@ -56,16 +56,16 @@ param modelName string
 param modelVersion string
 
 @description('Model deployment SKU name.')
-param modelSkuName string = 'Standard'
+param modelSkuName string = 'GlobalStandard'
 
 @description('Model deployment capacity.')
 param modelCapacity int = 1
 
-var hasIpRule = !empty(allowedClientIp)
+var hasIpRule = !empty(allowedClientIpRanges)
 var networkDefaultAction = (hasIpRule || publicNetworkAccess == 'Disabled') ? 'Deny' : 'Allow'
-var ipRules = hasIpRule ? [ { value: allowedClientIp } ] : []
+var ipRules = map(allowedClientIpRanges, r => { value: r })
 
-resource account 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
+resource account 'Microsoft.CognitiveServices/accounts@2026-09-01' = {
   name: accountName
   location: location
   tags: tags
@@ -88,7 +88,7 @@ resource account 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
   }
 }
 
-resource project 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' = {
+resource project 'Microsoft.CognitiveServices/accounts/projects@2026-09-01' = {
   parent: account
   name: projectName
   location: location
@@ -101,7 +101,7 @@ resource project 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' = {
   }
 }
 
-resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' = if (deployModel) {
+resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2026-09-01' = if (deployModel) {
   parent: account
   name: modelDeploymentName
   sku: {
@@ -115,6 +115,10 @@ resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-
       version: modelVersion
     }
   }
+  // Serialize child operations on the account; parallel writes return RequestConflict.
+  dependsOn: [
+    project
+  ]
 }
 
 resource accountDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
@@ -154,6 +158,10 @@ module pe 'private-endpoint.bicep' = if (deployPrivateEndpoints) {
       aiServicesPrivateDnsZoneId
     ]
   }
+  dependsOn: [
+    project
+    modelDeployment
+  ]
 }
 
 output accountId string = account.id

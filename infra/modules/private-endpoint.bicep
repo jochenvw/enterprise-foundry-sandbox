@@ -23,7 +23,7 @@ param groupIds array
 @description('One or more private DNS zone resource IDs to register the private endpoint records in.')
 param privateDnsZoneIds array
 
-resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01' = {
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2026-03-01' = {
   name: privateEndpointName
   location: location
   tags: tags
@@ -43,7 +43,7 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01' = {
   }
 }
 
-resource dnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-05-01' = {
+resource dnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2026-03-01' = {
   parent: privateEndpoint
   name: 'default'
   properties: {

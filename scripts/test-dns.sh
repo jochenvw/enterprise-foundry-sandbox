@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 require_login
 
-APIM_NAME="$(deployment_output apimName)"
+GATEWAY_URL="$(deployment_output aiGatewayUrl)"
 CENTRAL="$(deployment_output centralFoundryName)"
 TEAM_A="$(deployment_output teamAFoundryName)"
 TEAM_B="$(deployment_output teamBFoundryName)"
@@ -21,7 +21,7 @@ From a public machine these names resolve to public IPs (or NXDOMAIN). Run the
 following from a VM inside one of the VNets (deploy one with deployTestVm=true),
 from a peered network, or over VPN/Bastion:
 
-  nslookup ${APIM_NAME:-<apim-name>}.azure-api.net
+  nslookup ${GATEWAY_URL#https://}   # private IP only with deployAiGatewayPrivateEndpoint=true
   nslookup ${CENTRAL:-<central-foundry>}.openai.azure.com
   nslookup ${CENTRAL:-<central-foundry>}.cognitiveservices.azure.com
   nslookup ${TEAM_A:-<team-a-foundry>}.cognitiveservices.azure.com

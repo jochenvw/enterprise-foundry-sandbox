@@ -1,3 +1,22 @@
+# Historical implementation brief (superseded)
+
+This file records the original project brief and is retained for traceability; it is
+**not** the current architecture or deployment specification. Its API Management (APIM)
+requirements were superseded when the implementation moved to the standalone Azure AI
+Gateway (`Microsoft.ApiManagement/aigateways`) and added operator network access checks
+for Foundry live demos. Do not follow the APIM-specific requirements below for new work.
+
+Use the current documentation instead:
+
+- [README](README.md) for the current system and quick start.
+- [Architecture](docs/architecture.md) and [Azure AI Gateway](docs/ai-gateway.md) for
+  topology and model routing.
+- [Deployment](docs/deployment.md) and [live-demo access](docs/demo-access.md) for
+  deployment, network reachability, and policy exemptions.
+- [Security decisions](docs/security-decisions.md) for trust boundaries and controls.
+
+---
+
 You are GitHub Copilot Agent running in VS Code with terminal access to an empty repository. Build a production-style Azure simulation using Bicep.
 
 # Goal

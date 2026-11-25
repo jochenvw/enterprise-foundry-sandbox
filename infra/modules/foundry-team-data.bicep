@@ -28,8 +28,8 @@ param deployPrivateEndpoints bool = true
 ])
 param publicNetworkAccess string = 'Disabled'
 
-@description('Operator IP/CIDR to allowlist when public access is Enabled. Empty leaves no IP rule. Use a bare IP (no /32) for Storage/Key Vault compatibility.')
-param allowedClientIp string = ''
+@description('Operator IPs/CIDRs to allowlist when public access is Enabled. Empty leaves no IP rule. Pass single hosts bare (no /32) for Storage compatibility.')
+param allowedClientIpRanges array = []
 
 @description('Private endpoints subnet ID (in this team spoke).')
 param privateEndpointsSubnetId string
@@ -68,15 +68,14 @@ var cosmosName = 'cosmos-${teamName}-${nameSuffix}'
 var searchName = take('srch-${teamName}-${nameSuffix}', 60)
 var keyVaultName = take('kv-${teamCompact}-${uniqueSuffix}', 24)
 
-var hasIpRule = !empty(allowedClientIp)
-var publicAccessLower = toLower(publicNetworkAccess)
+var hasIpRule = !empty(allowedClientIpRanges)
 var networkDefaultAction = (hasIpRule || publicNetworkAccess == 'Disabled') ? 'Deny' : 'Allow'
 
 // -----------------------------------------------------------------------------
 // Storage
 // -----------------------------------------------------------------------------
 
-resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' = {
+resource storage 'Microsoft.Storage/storageAccounts@2026-09-01' = {
   name: storageName
   location: location
   tags: tags
@@ -87,18 +86,18 @@ resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' = {
   properties: {
     minimumTlsVersion: 'TLS1_2'
     allowBlobPublicAccess: false
-    allowSharedKeyAccess: true
+    allowSharedKeyAccess: false
     publicNetworkAccess: publicNetworkAccess
     networkAcls: {
       defaultAction: networkDefaultAction
       bypass: 'AzureServices'
-      ipRules: hasIpRule ? [ { value: allowedClientIp, action: 'Allow' } ] : []
+      ipRules: map(allowedClientIpRanges, r => { value: r, action: 'Allow' })
     }
     supportsHttpsTrafficOnly: true
   }
 }
 
-resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2024-01-01' = {
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2026-09-01' = {
   parent: storage
   name: 'default'
 }
@@ -127,7 +126,7 @@ resource blobDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-previ
 // Cosmos DB (serverless, SQL API)
 // -----------------------------------------------------------------------------
 
-resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
+resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2026-03-15' = {
   name: cosmosName
   location: location
   tags: tags
@@ -150,7 +149,8 @@ resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
       }
     ]
     publicNetworkAccess: publicNetworkAccess
-    ipRules: hasIpRule ? [ { ipAddressOrRange: allowedClientIp } ] : []
+    ipRules: map(allowedClientIpRanges, r => { ipAddressOrRange: r })
+    disableLocalAuth: true
     disableKeyBasedMetadataWriteAccess: false
     minimalTlsVersion: 'Tls12'
   }
@@ -180,7 +180,7 @@ resource cosmosDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
 // Azure AI Search
 // -----------------------------------------------------------------------------
 
-resource search 'Microsoft.Search/searchServices@2024-06-01-preview' = {
+resource search 'Microsoft.Search/searchServices@2026-11-01' = {
   name: searchName
   location: location
   tags: tags
@@ -190,10 +190,10 @@ resource search 'Microsoft.Search/searchServices@2024-06-01-preview' = {
   properties: {
     replicaCount: 1
     partitionCount: 1
-    hostingMode: 'default'
-    publicNetworkAccess: publicAccessLower
+    hostingMode: 'Default'
+    publicNetworkAccess: publicNetworkAccess
     networkRuleSet: {
-      ipRules: hasIpRule ? [ { value: allowedClientIp } ] : []
+      ipRules: map(allowedClientIpRanges, r => { value: r })
     }
     authOptions: {
       aadOrApiKey: {
@@ -227,7 +227,7 @@ resource searchDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
 // Key Vault (RBAC authorization)
 // -----------------------------------------------------------------------------
 
-resource keyVault 'Microsoft.KeyVault/vaults@2024-11-01' = if (deployKeyVault) {
+resource keyVault 'Microsoft.KeyVault/vaults@2026-05-15' = if (deployKeyVault) {
   name: keyVaultName
   location: location
   tags: tags
@@ -244,7 +244,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2024-11-01' = if (deployKeyVault) {
     networkAcls: {
       defaultAction: networkDefaultAction
       bypass: 'AzureServices'
-      ipRules: hasIpRule ? [ { value: allowedClientIp } ] : []
+      ipRules: map(allowedClientIpRanges, r => { value: r })
     }
   }
 }

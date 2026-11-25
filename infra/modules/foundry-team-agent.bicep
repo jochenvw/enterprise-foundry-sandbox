@@ -6,7 +6,7 @@
 // control-plane roles the agent runtime and capability host require.
 //
 // Connection + capabilityHost shapes follow the Microsoft foundry-samples
-// "standard agent" reference (capabilityHosts@2025-04-01-preview, AAD-auth
+// "standard agent" reference (capabilityHosts@2026-09-01, AAD-auth
 // connections of category CosmosDB / AzureStorageAccount / CognitiveSearch).
 // =============================================================================
 
@@ -42,23 +42,23 @@ var cosmosDataContributor = '00000000-0000-0000-0000-000000000002'
 // "Cosmos DB Operator" (control plane) - required before the capability host is created.
 var cosmosOperator = '230815da-be43-4aae-9cb4-875f7bd000aa'
 
-resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' existing = {
+resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2026-03-15' existing = {
   name: cosmosName
 }
 
-resource storage 'Microsoft.Storage/storageAccounts@2024-01-01' existing = {
+resource storage 'Microsoft.Storage/storageAccounts@2026-09-01' existing = {
   name: storageName
 }
 
-resource search 'Microsoft.Search/searchServices@2024-06-01-preview' existing = {
+resource search 'Microsoft.Search/searchServices@2026-11-01' existing = {
   name: searchName
 }
 
-resource account 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = {
+resource account 'Microsoft.CognitiveServices/accounts@2026-09-01' existing = {
   name: accountName
 }
 
-resource project 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' existing = {
+resource project 'Microsoft.CognitiveServices/accounts/projects@2026-09-01' existing = {
   parent: account
   name: projectName
 }
@@ -67,7 +67,7 @@ resource project 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' exis
 // Project connections to the BYO data (AAD auth; no keys stored)
 // -----------------------------------------------------------------------------
 
-resource cosmosConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2025-06-01' = {
+resource cosmosConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2026-09-01' = {
   parent: project
   name: cosmosName
   properties: {
@@ -82,7 +82,7 @@ resource cosmosConnection 'Microsoft.CognitiveServices/accounts/projects/connect
   }
 }
 
-resource storageConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2025-06-01' = {
+resource storageConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2026-09-01' = {
   parent: project
   name: storageName
   properties: {
@@ -100,7 +100,7 @@ resource storageConnection 'Microsoft.CognitiveServices/accounts/projects/connec
   ]
 }
 
-resource searchConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2025-06-01' = {
+resource searchConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2026-09-01' = {
   parent: project
   name: searchName
   properties: {
@@ -162,7 +162,7 @@ resource cosmosOperatorRole 'Microsoft.Authorization/roleAssignments@2022-04-01'
   }
 }
 
-resource cosmosDataRole 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-11-15' = {
+resource cosmosDataRole 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2026-03-15' = {
   parent: cosmos
   name: guid(cosmos.id, projectPrincipalId, cosmosDataContributor)
   properties: {
@@ -177,11 +177,10 @@ resource cosmosDataRole 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignment
 // Cosmos DB Operator role, which must exist before the capability host is created.
 // -----------------------------------------------------------------------------
 
-resource capabilityHost 'Microsoft.CognitiveServices/accounts/projects/capabilityHosts@2025-04-01-preview' = if (deployCapabilityHost) {
+resource capabilityHost 'Microsoft.CognitiveServices/accounts/projects/capabilityHosts@2026-09-01' = if (deployCapabilityHost) {
   parent: project
   name: capabilityHostName
   properties: {
-    capabilityHostKind: 'Agents'
     threadStorageConnections: [ cosmosName ]
     storageConnections: [ storageName ]
     vectorStoreConnections: [ searchName ]
